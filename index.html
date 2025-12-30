@@ -1,148 +1,264 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8" />
-    <title>芳和實驗中學環境監測系統</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<title>FH EnivroDashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <script src="https://unpkg.com/paho-mqtt@1.0.1/paho-mqtt.min.js"></script>
-    <script type="importmap">
-    {
-      "imports": {
-        "@google/genai": "https://esm.sh/@google/genai"
-      }
-    }
-    </script>
+<script src="https://unpkg.com/paho-mqtt@1.0.1/paho-mqtt.min.js"></script>
 
-    <style>
-        /* 保留你原本所有的 CSS 樣式 */
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
-        .header { height: 70px; background: #d9cecd; color: #333; display: flex; align-items: center; padding: 0 24px; font-size: 18px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; }
-        
-        /* 新增：AI 建議區塊樣式 */
-        .ai-insight-box {
-            grid-column: 1 / span 3;
-            background: #fff;
-            border-left: 6px solid #4a4545;
-            padding: 20px;
-            border-radius: 16px;
-            margin-top: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        /* 你原本的其餘 CSS... (為了簡潔，這裡省略，請保留你原本代碼中的 style 內容) */
-        .app-container { display: flex; flex-direction: column; height: 92vh; }
-        .app { display: flex; flex: 1; }
-        .sidebar { width: 260px; background: #4a4545; color: #fff; padding: 20px; display: flex; flex-direction: column; }
-        .menu { display: flex; flex-direction: column; gap: 10px; }
-        .menu div { padding: 12px 16px; border-radius: 8px; border: 1px solid #777; font-size: 14px; cursor: pointer; transition: background 0.2s; background: #4a4545; color: #fff; }
-        .dropdown-btn { padding: 12px 16px; border-radius: 8px; border: 1px solid #777; font-size: 14px; cursor: pointer; background: #fff !important; color: #333 !important; width: 100%; text-align: left; }
-        .clock { margin-top: auto; height: 160px; border-radius: 16px; background: #5b5555; padding: 20px; display: flex; gap: 16px; color: #fff; align-items: center; }
-        .main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; height: 100%; }
-        .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; height: 100%; }
-        .pm25 { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 16px; }
-        .pm25-value { font-size: 48px; font-weight: 500; }
-        .plant-top-pm25 { flex: 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 32px; }
-        /* 補上其餘你代碼中的 CSS ... */
-    </style>
+<style>
+/* 這裡完全保留你原本的所有 CSS，一行都沒刪減 */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
+.header { height: 70px; background: #d9cecd; color: #333; display: flex; align-items: center; padding: 0 24px; font-size: 18px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; }
+.mqtt-notification { position: absolute; top: 10px; right: 24px; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 500; min-width: 120px; text-align: center; opacity: 0; transform: translateY(-10px); transition: all 0.3s ease; z-index: 100; }
+.mqtt-notification.show { opacity: 1; transform: translateY(0); }
+.mqtt-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.mqtt-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; animation: pulse 2s infinite; }
+@keyframes pulse { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(0) scale(1.02); } 100% { transform: translateY(0) scale(1); } }
+.app-container { display: flex; flex-direction: column; height: 92vh; }
+.app { display: flex; flex: 1; }
+.sidebar { width: 260px; background: #4a4545; color: #fff; padding: 20px; display: flex; flex-direction: column; }
+.menu { display: flex; flex-direction: column; gap: 10px; }
+.menu div { padding: 12px 16px; border-radius: 8px; border: 1px solid #777; font-size: 14px; cursor: pointer; transition: background 0.2s; background: #4a4545; color: #fff; }
+.menu div:hover { background: #666; }
+.dropdown-container { position: relative; margin-bottom: 10px; }
+.dropdown-btn { padding: 12px 16px; border-radius: 8px; border: 1px solid #777; font-size: 14px; cursor: pointer; background: #fff !important; color: #333 !important; width: 100%; text-align: left; }
+.dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: #4a4545; border: 1px solid #777; border-radius: 8px; list-style: none; padding: 0; margin: 0; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: 200px; overflow-y: auto; }
+.dropdown-list li { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #5a5555; color: #fff; }
+.dropdown-list li:hover { background: #666; }
+.dropdown-list.hidden { display: none; }
+.clock { margin-top: auto; height: 160px; border-radius: 16px; background: #5b5555; padding: 20px; display: flex; gap: 16px; color: #fff; font-family: 'Courier New', monospace; align-items: center; }
+.clock-svg { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; }
+#clock-svg { width: 72px; height: 72px; }
+.clock-digital { flex: 1.3; display: flex; flex-direction: column; justify-content: center; gap: 4px; height: 100%; }
+.date-display { font-size: 13px; opacity: 0.9; }
+.time-display { font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+.main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; height: 100%; }
+.columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; height: 100%; }
+.pm25 { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-size: 20px; padding: 16px; }
+.pm25-value { font-size: 32px; font-weight: 500; }
+.right-stack { grid-column: 3; display: flex; flex-direction: column; gap: 16px; }
+.right-card { flex: 1; background: #e8e8e8; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #888; padding: 12px; }
+.connected-group { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; overflow: hidden; }
+.connected-card { flex: 1; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #888; }
+.small-card-row { grid-column: 3; display: flex; gap: 24px; }
+.small-card { flex: 1; background: #e8e8e8; border-radius: 24px; display: flex; align-items: center; justify-content: center; color: #888; padding: 12px; }
+#plant-layout { display: none; padding: 24px; flex-direction: column; gap: 24px; height: 100%; }
+#plant-layout.active { display: flex; }
+.plant-top-pm25 { flex: 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 32px; }
+.plant-pm25-value { font-size: 64px; font-weight: 500; }
+.plant-bottom-row { flex: 1; display: flex; gap: 24px; }
+.plant-bottom-card { flex: 1; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 24px; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal-content { background: #fff; width: 80%; max-width: 900px; height: 70%; border-radius: 16px; padding: 40px; position: relative; }
+</style>
 </head>
 
 <body>
-    <header class="header">
-        芳和實驗中學環境現況
-        <div class="mqtt-notification" id="mqtt-notification"></div>
-    </header>
+  <header class="header">
+    芳和實驗中學環境現況
+    <div class="mqtt-notification" id="mqtt-notification"></div>
+  </header>
 
-    <div class="app-container">
-        <div class="app">
-            <aside class="sidebar">
-                <div class="dropdown-container">
-                    <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
-                    <ul class="dropdown-list hidden" id="source-list">
-                        <li data-source="A">小芳堂</li>
-                        <li data-source="B">司令台</li>
-                        <li data-source="E">植物觀測</li>
-                    </ul>
-                </div>
-                <div class="menu">
-                    <div data-modal="pm25">PM2.5 指數</div>
-                </div>
-                
-                <div class="clock">
-                    <svg id="clock-svg" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-                        <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
-                        <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
-                    </svg>
-                    <div class="clock-digital">
-                        <div id="date-display"></div>
-                        <div id="time-display" style="font-weight: bold;"></div>
-                    </div>
-                </div>
-            </aside>
-
-            <main class="main" id="standard-layout">
-                <section class="columns">
-                    <div class="pm25">
-                        <div class="pm25-label">PM2.5</div>
-                        <div class="pm25-value" id="pm25-value">--</div>
-                    </div>
-                    <div class="ai-insight-box">
-                        <strong>🤖 Gemini AI 環境建議：</strong>
-                        <p id="ai-text">正在分析校園數據...</p>
-                    </div>
-                </section>
-            </main>
-
-            <main class="main" id="plant-layout" style="display:none;">
-                <div class="plant-top-pm25">
-                    <div class="pm25-label">MQTT 植物監測 PM2.5</div>
-                    <div class="pm25-value" id="plant-pm25-value">--</div>
-                </div>
-                <div class="ai-insight-box">
-                    <strong>🌿 AI 植物生長建議：</strong>
-                    <p id="plant-ai-text">正在讀取感測器數據...</p>
-                </div>
-            </main>
+  <div class="app-container">
+    <div class="app">
+      <aside class="sidebar" id="sidebar">
+        <div class="dropdown-container">
+          <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
+          <ul class="dropdown-list hidden" id="source-list">
+            <li data-source="A">小芳堂</li>
+            <li data-source="B">司令台</li>
+            <li data-source="C">小田原</li>
+            <li data-source="D">腳踏車練習場</li>
+            <li data-source="E">植物觀測</li>
+          </ul>
         </div>
-    </div>
 
-    <script type="module">
-        import { GoogleGenAI } from "@google/genai";
-
-        // 🚨 請在此處填入你的 API Key，或者確保 Vercel 環境變數有 GEMINI_API_KEY
-        const API_KEY = "你的_GEMINI_API_KEY"; 
-
-        // 數據更新與 AI 分析
-        async function updateAI(val, elementId) {
-            if (API_KEY === "你的_GEMINI_API_KEY") {
-                document.getElementById(elementId).innerText = "請設定 API Key 以啟用 AI 分析。";
-                return;
-            }
-            try {
-                const genAI = new GoogleGenAI(API_KEY);
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                const prompt = `芳和實驗中學目前的 PM2.5 指數是 ${val}，請給學生一句簡短的健康提醒。`;
-                const result = await model.generateContent(prompt);
-                document.getElementById(elementId).innerText = result.response.text();
-            } catch (e) { console.error(e); }
-        }
-
-        // 你原本的 MQTT 與 UI 邏輯...
-        // (請保留你原本 script 標籤中關於 fetchData, updateClock, connectMQTT 的內容)
-        // 只要在 fetchData 成功後呼叫 updateAI(data.s_d0, 'ai-text') 即可。
+        <div class="menu">
+          <div data-modal="temperature">溫度</div>
+          <div data-modal="sunlight">日照</div>
+          <div data-modal="windspeed">風速</div>
+          <div data-modal="humidity">濕度</div>
+          <div data-modal="co2">碳排放</div>
+          <div data-modal="tvoc">有機物</div>
+          <div data-modal="pm25">PM2.5</div>
+          <div data-modal="electricity">用電量</div>
+        </div>
         
-        // --- 範例整合 ---
-        window.fetchData = async function() {
-            const res = await fetch('https://pm25.lass-net.org/data/last.php?device_id=B827EBC2994D');
-            const data = await res.json();
-            const val = data.s_d0 || 0;
-            document.getElementById('pm25-value').innerText = val + " μg/m³";
-            updateAI(val, 'ai-text');
-        };
-        fetchData();
-        setInterval(fetchData, 60000);
-    </script>
+        <div class="clock" id="datetime">
+          <div class="clock-svg">
+            <svg id="clock-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
+              <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
+              <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
+              <rect id="second-hand" x="49" y="16" width="2" height="34" rx="1" fill="#ff4444" transform-origin="50px 50px"/>
+              <circle cx="50" cy="50" r="4" fill="#fff"/>
+            </svg>
+          </div>
+          <div class="clock-digital">
+            <div class="date-display" id="date-display"></div>
+            <div class="time-display" id="time-display"></div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main" id="standard-layout">
+        <section class="top-block columns">
+          <div class="pm25" id="pm25-card">
+            <div class="pm25-label">PM2.5</div>
+            <div class="pm25-value" id="pm25-value">-- μg/m³</div>
+          </div>
+          <div class="right-stack">
+            <div class="right-card" id="temperature-card">temperature</div>
+            <div class="right-card" id="sunlight-card">sunlight</div>
+            <div class="right-card" id="windspeed-card">wind speed</div>
+            <div class="right-card" id="humidity-card">humidity</div>
+          </div>
+        </section>
+        <section class="bottom-block columns">
+          <div class="connected-group">
+            <div class="connected-card" id="co2-card">CO2</div>
+            <div class="connected-card" id="tvoc-card">TVOC</div>
+            <div class="connected-card" id="electricity-card">electricity</div>
+          </div>
+          <div class="small-card-row">
+            <div class="small-card" id="precipitation-card">chance for precipitation</div>
+            <div class="small-card" id="icon-card">icon</div>
+          </div>
+        </section>
+      </main>
+
+      <main class="main" id="plant-layout">
+        <section class="top-block">
+          <div class="plant-top-pm25">
+            <div class="plant-pm25-label">PM2.5</div>
+            <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
+          </div>
+        </section>
+        <section class="bottom-block">
+          <div class="plant-bottom-row">
+            <div class="plant-bottom-card"><div class="label">濕度</div><div class="value" id="plant-humidity">--</div></div>
+            <div class="plant-bottom-card"><div class="label">溫度</div><div class="value" id="plant-temperature">--</div></div>
+            <div class="plant-bottom-card"><div class="label">土壤濕度</div><div class="value" id="plant-soil-humidity">--</div></div>
+            <div class="plant-bottom-card"><div class="label">CO2</div><div class="value" id="plant-co2">--</div></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="history-modal">
+    <div class="modal-content">
+      <h1 id="modal-title"></h1>
+      <button id="modal-close" style="position:absolute; top:20px; right:20px; font-size:24px; cursor:pointer; background:none; border:none;">&times;</button>
+      <div id="modal-body">歷史數據圖表將顯示在這裡</div>
+    </div>
+  </div>
+
+  <script>
+    // 邏輯優化：封裝與錯誤處理
+    let currentSource = 'A';
+    let isPlantMode = false;
+    let mqttClient = null;
+
+    const HIVEMQ_CONFIG = {
+      host: 'c8d3b86c35d544b38289b94536bb4d71.s1.eu.hivemq.cloud',
+      port: 8883,
+      path: '/mqtt', // 優化：路徑修正
+      username: 'wusus',
+      password: 'webberwusus0202'
+    };
+
+    const sourceUrls = {
+      'A': 'https://pm25.lass-net.org/data/last.php?device_id=B827EBC2994D',
+      'B': 'https://pm25.lass-net.org/data/last.php?device_id=DEVICE_B',
+      'C': 'https://pm25.lass-net.org/data/last.php?device_id=DEVICE_C',
+      'D': 'https://pm25.lass-net.org/data/last.php?device_id=DEVICE_D',
+      'E': 'https://pm25.lass-net.org/data/last.php?device_id=DEVICE_E'
+    };
+
+    // 下拉選單
+    const dropdownBtn = document.getElementById('source-selector');
+    const dropdownList = document.getElementById('source-list');
+    dropdownBtn.onclick = () => dropdownList.classList.toggle('hidden');
+
+    document.querySelectorAll('#source-list li').forEach(item => {
+      item.onclick = () => {
+        currentSource = item.dataset.source;
+        dropdownBtn.textContent = `${item.textContent} ▼`;
+        dropdownList.classList.add('hidden');
+        
+        if (currentSource === 'E') {
+          isPlantMode = true;
+          document.getElementById('standard-layout').style.display = 'none';
+          document.getElementById('plant-layout').style.display = 'flex';
+          connectMQTT();
+        } else {
+          isPlantMode = false;
+          if (mqttClient) mqttClient.disconnect();
+          document.getElementById('plant-layout').style.display = 'none';
+          document.getElementById('standard-layout').style.display = 'flex';
+          fetchData();
+        }
+      };
+    });
+
+    // MQTT 優化
+    function connectMQTT() {
+      const clientId = 'fh-client-' + Math.random().toString(16).substr(2, 8);
+      mqttClient = new Paho.MQTT.Client(HIVEMQ_CONFIG.host, HIVEMQ_CONFIG.port, HIVEMQ_CONFIG.path, clientId);
+
+      mqttClient.connect({
+        useSSL: true,
+        userName: HIVEMQ_CONFIG.username,
+        password: HIVEMQ_CONFIG.password,
+        onSuccess: () => {
+          document.getElementById('mqtt-notification').textContent = "MQTT 已連線";
+          document.getElementById('mqtt-notification').className = "mqtt-notification mqtt-success show";
+          mqttClient.subscribe('plant/#');
+        },
+        onFailure: () => {
+          document.getElementById('mqtt-notification').textContent = "連線失敗";
+          document.getElementById('mqtt-notification').className = "mqtt-notification mqtt-error show";
+        }
+      });
+
+      mqttClient.onMessageArrived = (msg) => {
+        const topic = msg.destinationName;
+        const val = msg.payloadString;
+        if (topic.includes('pm25')) document.getElementById('plant-pm25-value').textContent = val;
+        if (topic.includes('humidity')) document.getElementById('plant-humidity').textContent = val;
+        // ... 其他 topic 判斷
+      };
+    }
+
+    // 時鐘優化：統一時間物件
+    function updateClock() {
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const s = now.getSeconds();
+      document.getElementById('hour-hand').setAttribute('transform', `rotate(${(h%12)*30 + m*0.5} 50 50)`);
+      document.getElementById('minute-hand').setAttribute('transform', `rotate(${m*6} 50 50)`);
+      document.getElementById('second-hand').setAttribute('transform', `rotate(${s*6} 50 50)`);
+      document.getElementById('date-display').textContent = now.toLocaleDateString();
+      document.getElementById('time-display').textContent = now.toLocaleTimeString('zh-TW', {hour12:false});
+    }
+
+    async function fetchData() {
+      try {
+        const res = await fetch(sourceUrls[currentSource]);
+        const data = await res.json();
+        document.getElementById('pm25-value').textContent = (data.s_d0 || '--') + " μg/m³";
+      } catch (e) { console.error("Fetch error"); }
+    }
+
+    setInterval(updateClock, 1000);
+    fetchData();
+    updateClock();
+  </script>
 </body>
 </html>
