@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <title>芳和實驗中學環境監測系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <script src="https://unpkg.com/paho-mqtt@1.0.1/paho-mqtt.min.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai"
+      }
+    }
+    </script>
+
+    <style>
+        /* 保留你原本所有的 CSS 樣式 */
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
+        .header { height: 70px; background: #d9cecd; color: #333; display: flex; align-items: center; padding: 0 24px; font-size: 18px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; }
+        
+        /* 新增：AI 建議區塊樣式 */
+        .ai-insight-box {
+            grid-column: 1 / span 3;
+            background: #fff;
+            border-left: 6px solid #4a4545;
+            padding: 20px;
+            border-radius: 16px;
+            margin-top: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        /* 你原本的其餘 CSS... (為了簡潔，這裡省略，請保留你原本代碼中的 style 內容) */
+        .app-container { display: flex; flex-direction: column; height: 92vh; }
+        .app { display: flex; flex: 1; }
+        .sidebar { width: 260px; background: #4a4545; color: #fff; padding: 20px; display: flex; flex-direction: column; }
+        .menu { display: flex; flex-direction: column; gap: 10px; }
+        .menu div { padding: 12px 16px; border-radius: 8px; border: 1px solid #777; font-size: 14px; cursor: pointer; transition: background 0.2s; background: #4a4545; color: #fff; }
+        .dropdown-btn { padding: 12px 16px; border-radius: 8px; border: 1px solid #777; font-size: 14px; cursor: pointer; background: #fff !important; color: #333 !important; width: 100%; text-align: left; }
+        .clock { margin-top: auto; height: 160px; border-radius: 16px; background: #5b5555; padding: 20px; display: flex; gap: 16px; color: #fff; align-items: center; }
+        .main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; height: 100%; }
+        .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; height: 100%; }
+        .pm25 { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 16px; }
+        .pm25-value { font-size: 48px; font-weight: 500; }
+        .plant-top-pm25 { flex: 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; padding: 32px; }
+        /* 補上其餘你代碼中的 CSS ... */
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        芳和實驗中學環境現況
+        <div class="mqtt-notification" id="mqtt-notification"></div>
+    </header>
+
+    <div class="app-container">
+        <div class="app">
+            <aside class="sidebar">
+                <div class="dropdown-container">
+                    <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
+                    <ul class="dropdown-list hidden" id="source-list">
+                        <li data-source="A">小芳堂</li>
+                        <li data-source="B">司令台</li>
+                        <li data-source="E">植物觀測</li>
+                    </ul>
+                </div>
+                <div class="menu">
+                    <div data-modal="pm25">PM2.5 指數</div>
+                </div>
+                
+                <div class="clock">
+                    <svg id="clock-svg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
+                        <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
+                        <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
+                    </svg>
+                    <div class="clock-digital">
+                        <div id="date-display"></div>
+                        <div id="time-display" style="font-weight: bold;"></div>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="main" id="standard-layout">
+                <section class="columns">
+                    <div class="pm25">
+                        <div class="pm25-label">PM2.5</div>
+                        <div class="pm25-value" id="pm25-value">--</div>
+                    </div>
+                    <div class="ai-insight-box">
+                        <strong>🤖 Gemini AI 環境建議：</strong>
+                        <p id="ai-text">正在分析校園數據...</p>
+                    </div>
+                </section>
+            </main>
+
+            <main class="main" id="plant-layout" style="display:none;">
+                <div class="plant-top-pm25">
+                    <div class="pm25-label">MQTT 植物監測 PM2.5</div>
+                    <div class="pm25-value" id="plant-pm25-value">--</div>
+                </div>
+                <div class="ai-insight-box">
+                    <strong>🌿 AI 植物生長建議：</strong>
+                    <p id="plant-ai-text">正在讀取感測器數據...</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+
+        // 🚨 請在此處填入你的 API Key，或者確保 Vercel 環境變數有 GEMINI_API_KEY
+        const API_KEY = "你的_GEMINI_API_KEY"; 
+
+        // 數據更新與 AI 分析
+        async function updateAI(val, elementId) {
+            if (API_KEY === "你的_GEMINI_API_KEY") {
+                document.getElementById(elementId).innerText = "請設定 API Key 以啟用 AI 分析。";
+                return;
+            }
+            try {
+                const genAI = new GoogleGenAI(API_KEY);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const prompt = `芳和實驗中學目前的 PM2.5 指數是 ${val}，請給學生一句簡短的健康提醒。`;
+                const result = await model.generateContent(prompt);
+                document.getElementById(elementId).innerText = result.response.text();
+            } catch (e) { console.error(e); }
+        }
+
+        // 你原本的 MQTT 與 UI 邏輯...
+        // (請保留你原本 script 標籤中關於 fetchData, updateClock, connectMQTT 的內容)
+        // 只要在 fetchData 成功後呼叫 updateAI(data.s_d0, 'ai-text') 即可。
+        
+        // --- 範例整合 ---
+        window.fetchData = async function() {
+            const res = await fetch('https://pm25.lass-net.org/data/last.php?device_id=B827EBC2994D');
+            const data = await res.json();
+            const val = data.s_d0 || 0;
+            document.getElementById('pm25-value').innerText = val + " μg/m³";
+            updateAI(val, 'ai-text');
+        };
+        fetchData();
+        setInterval(fetchData, 60000);
+    </script>
+</body>
+</html>
