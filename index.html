@@ -1,299 +1,310 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>FH EnviroDashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
-/* ================= 基本 ================= */
 * { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  background: #f2f2f2;
-}
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
 
-/* ================= Header ================= */
+/* ===== Header ===== */
 .header {
-  background: #1f2937;
-  color: #fff;
-  padding: 16px;
-  font-size: 20px;
+  height: 70px;
+  background: #d9cecd;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 0 24px;
+  font-size: 18px;
+  position: relative;
+}
+#data-status {
+  position: absolute;
+  right: 24px;
+  font-size: 12px;
 }
 
-/* ================= App Layout ================= */
-.app-container {
-  height: calc(100vh - 64px);
-}
+/* ===== Layout ===== */
+.app-container { height: calc(100vh - 70px); }
+.app { display: flex; height: 100%; }
 
-.app {
-  display: flex;
-  height: 100%;
-}
-
-/* ================= Sidebar ================= */
+/* ===== Sidebar ===== */
 .sidebar {
   width: 260px;
-  background: #111827;
+  background: #4a4545;
   color: #fff;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
 }
 
-/* Dropdown */
-.dropdown-container {
-  position: relative;
-  margin-bottom: 16px;
-}
-
 .dropdown-btn {
   width: 100%;
-  padding: 10px;
-  background: #1f2937;
-  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
 }
 
 .dropdown-list {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #374151;
   list-style: none;
   padding: 0;
-  margin: 0;
-  z-index: 10;
+  margin-top: 8px;
+  background: #5b5555;
+  border-radius: 8px;
 }
-
+.dropdown-list.hidden { display: none; }
 .dropdown-list li {
   padding: 10px;
   cursor: pointer;
 }
+.dropdown-list li:hover { background: #777; }
 
-.dropdown-list li:hover {
-  background: #4b5563;
+.menu {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-
-.hidden { display: none; }
-
-/* Menu */
 .menu div {
-  padding: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #5b5555;
   cursor: pointer;
-  border-radius: 6px;
 }
+.menu div:hover { background: #777; }
 
-.menu div:hover {
-  background: #374151;
-}
-
-/* Clock */
+/* ===== Clock ===== */
 .clock {
   margin-top: auto;
-  text-align: center;
+  background: #5b5555;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
 }
+.clock-svg { width: 80px; }
+.clock-digital { font-size: 13px; }
 
-.clock svg {
-  width: 80px;
-  margin-bottom: 8px;
-}
-
-/* ================= Main ================= */
+/* ===== Main ===== */
 .main {
   flex: 1;
   padding: 24px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-/* ================= Modal ================= */
+/* ===== Dashboard Grid ===== */
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+.pm25 {
+  grid-column: 1 / span 2;
+  background: #e8e8e8;
+  border-radius: 24px;
+  padding: 24px;
+  text-align: center;
+}
+.pm25-value { font-size: 32px; }
+
+.right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.right-card {
+  background: #e8e8e8;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
+
+.connected-group {
+  grid-column: 1 / span 2;
+  display: flex;
+  background: #e8e8e8;
+  border-radius: 24px;
+}
+.connected-card {
+  flex: 1;
+  padding: 20px;
+  text-align: center;
+  border-right: 1px solid #ccc;
+}
+.connected-card:last-child { border-right: none; }
+
+.small-card-row {
+  display: flex;
+  gap: 24px;
+}
+.small-card {
+  flex: 1;
+  background: #e8e8e8;
+  border-radius: 24px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* ===== Modal ===== */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
   display: none;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 }
-
-.modal-overlay.active {
-  display: flex;
-}
-
+.modal-overlay.active { display: flex; }
 .modal-content {
   background: #fff;
-  width: 90%;
-  max-width: 520px;
-  border-radius: 12px;
-  padding: 16px;
+  width: 80%;
+  max-width: 800px;
+  height: 70%;
+  border-radius: 16px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
 }
-
 .modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
-
 .modal-close {
-  background: none;
-  border: none;
-  font-size: 28px;
   cursor: pointer;
+  font-size: 20px;
 }
-
-.data-box {
+.modal-body {
   margin-top: 20px;
-  padding: 24px;
+  flex: 1;
+  background: #f5f5f5;
   border-radius: 12px;
-  border: 1px solid #ddd;
-  text-align: center;
-  font-size: 24px;
+  padding: 20px;
 }
 </style>
 </head>
 
 <body>
-
 <header class="header">
   芳和實驗中學環境現況
-  <div id="data-status">載入中...</div>
+  <div id="data-status">即時顯示</div>
 </header>
 
 <div class="app-container">
-  <div class="app">
+<div class="app">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
+<!-- ===== Sidebar ===== -->
+<aside class="sidebar">
+  <button class="dropdown-btn" id="source-btn">小芳堂 ▼</button>
+  <ul class="dropdown-list hidden" id="source-list">
+    <li>小芳堂</li>
+    <li>司令台</li>
+    <li>小田原</li>
+    <li>腳踏車練習場</li>
+    <li>植物觀測</li>
+  </ul>
 
-      <div class="dropdown-container">
-        <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
-        <ul class="dropdown-list hidden" id="source-list">
-          <li data-source="A">小芳堂</li>
-          <li data-source="B">司令台</li>
-          <li data-source="C">小田原</li>
-          <li data-source="D">腳踏車練習場</li>
-          <li data-source="E">植物觀測</li>
-        </ul>
-      </div>
-
-      <div class="menu">
-        <div data-modal="temperature">溫度</div>
-        <div data-modal="sunlight">日照</div>
-        <div data-modal="windspeed">風速</div>
-        <div data-modal="humidity">濕度</div>
-        <div data-modal="co2">碳排放</div>
-        <div data-modal="tvoc">有機物</div>
-        <div data-modal="pm25">PM2.5</div>
-        <div data-modal="electricity">用電量</div>
-      </div>
-
-      <div class="clock">
-        <svg viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-          <rect id="hour" x="48" y="25" width="4" height="25" fill="#ddd"/>
-          <rect id="minute" x="49" y="18" width="2" height="32" fill="#fff"/>
-          <rect id="second" x="49.5" y="16" width="1" height="34" fill="#ff4444"/>
-        </svg>
-        <div id="date-display"></div>
-        <div id="time-display"></div>
-      </div>
-
-    </aside>
-
-    <!-- Main -->
-    <main class="main" id="standard-layout">
-      <h2>主畫面</h2>
-      <p>請從左側選擇項目</p>
-    </main>
-
-    <main class="main" id="plant-layout" style="display:none;">
-      <h2>植物觀測</h2>
-      <p>請使用左側選單查看數據</p>
-    </main>
-
+  <div class="menu">
+    <div data-modal="溫度">溫度</div>
+    <div data-modal="濕度">濕度</div>
+    <div data-modal="PM2.5">PM2.5</div>
+    <div data-modal="CO2">碳排放</div>
   </div>
+
+  <div class="clock">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="45" stroke="#fff" fill="none"/>
+      <line id="sec" x1="50" y1="50" x2="50" y2="10" stroke="red"/>
+    </svg>
+    <div class="clock-digital">
+      <div id="date"></div>
+      <div id="time"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ===== Main Dashboard ===== -->
+<main class="main" id="standard-layout">
+
+<section class="columns">
+  <div class="pm25">
+    <div>PM2.5</div>
+    <div class="pm25-value">-- μg/m³</div>
+  </div>
+
+  <div class="right-stack">
+    <div class="right-card">-- °C</div>
+    <div class="right-card">-- lux</div>
+    <div class="right-card">-- m/s</div>
+    <div class="right-card">-- %</div>
+  </div>
+</section>
+
+<section class="columns">
+  <div class="connected-group">
+    <div class="connected-card">-- ppm</div>
+    <div class="connected-card">-- ppb</div>
+    <div class="connected-card">-- kWh</div>
+  </div>
+
+  <div class="small-card-row">
+    <div class="small-card">-- %</div>
+    <div class="small-card">🌤️</div>
+  </div>
+</section>
+
+</main>
+</div>
 </div>
 
-<!-- Modal -->
+<!-- ===== Modal ===== -->
 <div class="modal-overlay" id="modal">
   <div class="modal-content">
     <div class="modal-header">
       <h2 id="modal-title"></h2>
-      <button class="modal-close" id="modal-close">&times;</button>
+      <div class="modal-close" id="modal-close">✕</div>
     </div>
-    <div class="data-box" id="modal-body">--</div>
+    <div class="modal-body">
+      歷史數據區（之後接圖表）
+    </div>
   </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-
-  let currentPlace = '小芳堂';
-
-  const selector = document.getElementById('source-selector');
-  const list = document.getElementById('source-list');
-  const modal = document.getElementById('modal');
-  const modalTitle = document.getElementById('modal-title');
-  const modalBody = document.getElementById('modal-body');
-
-  const standard = document.getElementById('standard-layout');
-  const plant = document.getElementById('plant-layout');
-
-  /* 下拉 */
-  selector.onclick = e => {
-    e.stopPropagation();
-    list.classList.toggle('hidden');
+/* Dropdown */
+const btn = document.getElementById('source-btn');
+const list = document.getElementById('source-list');
+btn.onclick = () => list.classList.toggle('hidden');
+list.querySelectorAll('li').forEach(li=>{
+  li.onclick=()=>{
+    btn.textContent = li.textContent + ' ▼';
+    list.classList.add('hidden');
   };
-
-  document.querySelectorAll('#source-list li').forEach(li => {
-    li.onclick = () => {
-      currentPlace = li.textContent;
-      selector.textContent = currentPlace + ' ▼';
-      list.classList.add('hidden');
-
-      if (li.dataset.source === 'E') {
-        standard.style.display = 'none';
-        plant.style.display = 'block';
-      } else {
-        standard.style.display = 'block';
-        plant.style.display = 'none';
-      }
-    };
-  });
-
-  document.addEventListener('click', () => list.classList.add('hidden'));
-
-  /* Menu → Modal */
-  document.querySelectorAll('.menu div').forEach(item => {
-    item.onclick = () => {
-      modalTitle.textContent = currentPlace + '｜' + item.textContent;
-      modalBody.textContent = '--';
-      modal.classList.add('active');
-    };
-  });
-
-  document.getElementById('modal-close').onclick = () => {
-    modal.classList.remove('active');
-  };
-
-  modal.onclick = e => {
-    if (e.target === modal) modal.classList.remove('active');
-  };
-
-  /* Clock */
-  setInterval(() => {
-    const now = new Date();
-    document.getElementById('date-display').textContent = now.toLocaleDateString();
-    document.getElementById('time-display').textContent = now.toLocaleTimeString();
-  }, 1000);
-
 });
+
+/* Modal */
+const modal = document.getElementById('modal');
+document.querySelectorAll('.menu div').forEach(d=>{
+  d.onclick=()=>{
+    document.getElementById('modal-title').textContent = d.textContent;
+    modal.classList.add('active');
+  };
+});
+document.getElementById('modal-close').onclick=()=>modal.classList.remove('active');
+
+/* Clock */
+function tick(){
+  const now=new Date();
+  document.getElementById('date').textContent=now.toLocaleDateString();
+  document.getElementById('time').textContent=now.toLocaleTimeString();
+  document.getElementById('sec').setAttribute(
+    'transform',`rotate(${now.getSeconds()*6} 50 50)`
+  );
+}
+setInterval(tick,1000); tick();
 </script>
 
 </body>
