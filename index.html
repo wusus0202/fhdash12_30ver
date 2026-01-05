@@ -52,7 +52,7 @@
      </div>
    </aside>
 
-   <!-- 標準 + 植物頁面 -->
+   <!-- =================== 標準頁面 =================== -->
    <main class="main" id="standard-layout">
      <section class="top-block columns">
        <div class="pm25" id="pm25-card">
@@ -79,28 +79,42 @@
      </section>
    </main>
 
+   <!-- =================== 植物觀測頁面 (新增/修改的部分) =================== -->
    <main class="main" id="plant-layout">
-  <section class="plant-top-pm25">
-    <div class="plant-pm25-label">PM2.5</div>
-    <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
-  </section>
+     <!-- 上方大格子 PM2.5 -->
+     <section class="plant-top-pm25">
+       <div class="plant-pm25-label">PM2.5</div>
+       <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
+     </section>
 
-  <section class="plant-bottom-row">
-    <div class="plant-bottom-card">
-      <div class="label">溫度</div>
-      <div class="value" id="plant-temp-value">-- °C</div>
-    </div>
-    <div class="plant-bottom-card">
-      <div class="label">濕度</div>
-      <div class="value" id="plant-hum-value">-- %</div>
-    </div>
-    <div class="plant-bottom-card">
-      <div class="label">光照</div>
-      <div class="value" id="plant-light-value">-- lx</div>
-    </div>
-  </section>
-</main>
-
+     <!-- 下方小格子群 (新增 6 個格子) -->
+     <section class="plant-bottom-row">
+       <div class="plant-bottom-card">
+         <div class="label">溫度</div>
+         <div class="value" id="plant-temp-value">-- °C</div>
+       </div>
+       <div class="plant-bottom-card">
+         <div class="label">濕度</div>
+         <div class="value" id="plant-hum-value">-- %</div>
+       </div>
+       <div class="plant-bottom-card">
+         <div class="label">光照</div>
+         <div class="value" id="plant-light-value">-- lx</div>
+       </div>
+       <div class="plant-bottom-card">
+         <div class="label">土壤濕度</div>
+         <div class="value" id="plant-soil-value">-- %</div>
+       </div>
+       <div class="plant-bottom-card">
+         <div class="label">CO₂</div>
+         <div class="value" id="plant-co2-value">-- ppm</div>
+       </div>
+       <div class="plant-bottom-card">
+         <div class="label">PM10</div>
+         <div class="value" id="plant-pm10-value">-- μg/m³</div>
+       </div>
+     </section>
+   </main>
  </div>
 </div>
 
