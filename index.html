@@ -4,213 +4,105 @@
 <meta charset="UTF-8" />
 <title>FH EnviroDashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
-/* ===== 基本樣式 ===== */
-* { box-sizing: border-box; }
-body { margin:0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
-
-/* ===== Header ===== */
-.header {
-  height:70px; background:#d9cecd; color:#333; display:flex; align-items:center; padding:0 24px; font-size:18px; font-weight:500; box-shadow:0 2px 4px rgba(0,0,0,0.1); position:relative;
-}
-#data-status { position:absolute; right:24px; padding:6px 12px; border-radius:12px; font-size:12px; font-weight:500; border:1px solid transparent; transition: all 0.3s ease; }
-
-/* ===== App container ===== */
-.app-container { display:flex; flex-direction:column; height:92vh; }
-.app { display:flex; flex:1; }
-
-/* ===== Sidebar ===== */
-.sidebar { width:260px; background:#4a4545; color:#fff; padding:20px; display:flex; flex-direction:column; }
-.menu { display:flex; flex-direction:column; gap:10px; }
-.menu div { padding:12px 16px; border-radius:8px; border:1px solid #777; font-size:14px; cursor:pointer; transition:0.2s; background:#4a4545; }
-.menu div:hover { background:#666; }
-
-/* Dropdown */
-.dropdown-container { position:relative; margin-bottom:10px; }
-.dropdown-btn { padding:12px 16px; border-radius:8px; border:1px solid #777; font-size:14px; cursor:pointer; background:#fff; color:#333; width:100%; text-align:left; }
-.dropdown-btn:hover { background:#f0f0f0; }
-.dropdown-list { position:absolute; top:100%; left:0; right:0; background:#4a4545; border:1px solid #777; border-radius:8px; list-style:none; padding:0; margin:0; z-index:1000; max-height:200px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
-.dropdown-list li { padding:12px 16px; cursor:pointer; border-bottom:1px solid #5a5555; color:#fff; }
-.dropdown-list li:hover { background:#666; }
-.hidden { display:none; }
-
-/* ===== Clock ===== */
-.clock { margin-top:auto; height:160px; border-radius:16px; background:#5b5555; padding:20px; display:flex; gap:16px; color:#fff; font-family:'Courier New', monospace; align-items:center; }
-.clock-svg { flex:1; display:flex; align-items:center; justify-content:center; }
-.clock-digital { flex:1.3; display:flex; flex-direction:column; justify-content:center; gap:4px; height:100%; }
-.date-display { font-size:13px; opacity:0.9; align-self:flex-start; }
-.time-display { font-size:16px; font-weight:600; letter-spacing:1px; align-self:flex-start; }
-
-/* ===== Main content ===== */
-.main { flex:1; padding:24px; display:flex; flex-direction:column; gap:24px; height:100%; }
-.columns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px; height:100%; }
-
-.top-block .pm25 { grid-column:1/ span 2; background:#e8e8e8; border-radius:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#888; font-size:20px; padding:16px; }
-.top-block .pm25-label { font-size:20px; margin-bottom:8px; }
-.top-block .pm25-value { font-size:32px; font-weight:500; }
-
-.right-stack .right-card { flex:1; background:#e8e8e8; border-radius:20px; display:flex; align-items:center; justify-content:center; color:#888; padding:12px; margin-bottom:8px; }
-
-.bottom-block .connected-group { grid-column:1/ span 2; background:#e8e8e8; border-radius:24px; display:flex; overflow:hidden; }
-.bottom-block .connected-card { flex:1; border-right:1px solid #ddd; display:flex; align-items:center; justify-content:center; color:#888; padding:12px; }
-.bottom-block .connected-card:last-child { border-right:none; }
-.bottom-block .small-card-row { grid-column:3; display:flex; gap:24px; }
-.bottom-block .small-card { flex:1; background:#e8e8e8; border-radius:24px; display:flex; align-items:center; justify-content:center; color:#888; padding:12px; }
-
-/* ===== Plant layout ===== */
-#plant-layout { display:none; padding:24px; flex-direction:column; gap:12px; height:100%; }
-#plant-layout.active { display:flex; }
-.plant-top { flex:2; background:#e8e8e8; border-radius:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#888; padding:50px; }
-.plant-top .label { font-size:28px; margin-bottom:16px; }
-.plant-top .value { font-size:64px; font-weight:500; }
-.plant-bottom { flex:1; display:flex; gap:12px; }
-.plant-bottom-card { flex:1; background:#e8e8e8; border-radius:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#888; padding:50px; }
-.plant-bottom-card .label { font-size:18px; margin-bottom:12px; opacity:0.8; }
-.plant-bottom-card .value { font-size:32px; font-weight:500; }
-
-/* ===== 隱藏 class ===== */
-.hidden-layout { display:none !important; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="header">
- 芳和實驗中學環境現況
- <div id="data-status">載入中...</div>
+  芳和實驗中學環境現況
+  <div id="data-status">載入中...</div>
 </header>
 
 <div class="app-container">
- <div class="app">
-   <aside class="sidebar">
-     <div class="dropdown-container">
-       <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
-       <ul class="dropdown-list hidden" id="source-list">
-         <li data-source="A">小芳堂</li>
-         <li data-source="B">司令台</li>
-         <li data-source="C">小田原</li>
-         <li data-source="D">腳踏車練習場</li>
-         <li data-source="E">植物觀測</li>
-       </ul>
-     </div>
-     <div class="menu">
-       <div data-modal="temperature">溫度</div>
-       <div data-modal="sunlight">日照</div>
-       <div data-modal="windspeed">風速</div>
-       <div data-modal="humidity">濕度</div>
-       <div data-modal="co2">碳排放</div>
-       <div data-modal="tvoc">有機物</div>
-       <div data-modal="pm25">PM2.5</div>
-       <div data-modal="electricity">用電量</div>
-     </div>
-     <div class="clock" id="datetime">
-       <div class="clock-svg">
-         <svg id="clock-svg" viewBox="0 0 100 100">
-           <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-           <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
-           <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
-           <rect id="second-hand" x="49" y="16" width="2" height="34" rx="1" fill="#ff4444" transform-origin="50px 50px"/>
-           <circle cx="50" cy="50" r="4" fill="#fff"/>
-         </svg>
-       </div>
-       <div class="clock-digital">
-         <div class="date-display" id="date-display"></div>
-         <div class="time-display" id="time-display"></div>
-       </div>
-     </div>
-   </aside>
+  <div class="app">
+    <!-- ================= Sidebar ================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="dropdown-container">
+        <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
+        <ul class="dropdown-list hidden" id="source-list">
+          <li data-source="A">小芳堂</li>
+          <li data-source="B">司令台</li>
+          <li data-source="C">小田原</li>
+          <li data-source="D">腳踏車練習場</li>
+          <li data-source="E">植物觀測</li>
+        </ul>
+      </div>
+      <div class="menu">
+        <div data-modal="temperature">溫度</div>
+        <div data-modal="sunlight">日照</div>
+        <div data-modal="windspeed">風速</div>
+        <div data-modal="humidity">濕度</div>
+        <div data-modal="co2">碳排放</div>
+        <div data-modal="tvoc">有機物</div>
+        <div data-modal="pm25">PM2.5</div>
+        <div data-modal="electricity">用電量</div>
+      </div>
+      <div class="clock" id="datetime">
+        <div class="clock-svg">
+          <svg id="clock-svg" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
+            <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
+            <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
+            <rect id="second-hand" x="49" y="16" width="2" height="34" rx="1" fill="#ff4444" transform-origin="50px 50px"/>
+            <circle cx="50" cy="50" r="4" fill="#fff"/>
+          </svg>
+        </div>
+        <div class="clock-digital">
+          <div class="date-display" id="date-display"></div>
+          <div class="time-display" id="time-display"></div>
+        </div>
+      </div>
+    </aside>
 
-   <!-- 標準頁面 -->
-   <main class="main" id="standard-layout">
-     <section class="top-block columns">
-       <div class="pm25" id="pm25-card">
-         <div class="pm25-label">PM2.5</div>
-         <div class="pm25-value" id="pm25-value">-- μg/m³</div>
-       </div>
-       <div class="right-stack">
-         <div class="right-card" id="temperature-card">-- °C</div>
-         <div class="right-card" id="sunlight-card">-- lux</div>
-         <div class="right-card" id="windspeed-card">-- m/s</div>
-         <div class="right-card" id="humidity-card">-- %</div>
-       </div>
-     </section>
-     <section class="bottom-block columns">
-       <div class="connected-group">
-         <div class="connected-card" id="co2-card">-- ppm</div>
-         <div class="connected-card" id="tvoc-card">-- ppb</div>
-         <div class="connected-card" id="electricity-card">-- kWh</div>
-       </div>
-       <div class="small-card-row">
-         <div class="small-card" id="precipitation-card">-- %</div>
-         <div class="small-card" id="icon-card">🌤️</div>
-       </div>
-     </section>
-   </main>
+    <!-- ================= Main Content ================= -->
+    <main class="main" id="standard-layout">
+      <!-- 標準環境格子 -->
+      <section class="top-block columns">
+        <div class="pm25" id="pm25-card">
+          <div class="pm25-label">PM2.5</div>
+          <div class="pm25-value" id="pm25-value">-- μg/m³</div>
+        </div>
+        <div class="right-stack">
+          <div class="right-card" id="temperature-card">-- °C</div>
+          <div class="right-card" id="sunlight-card">-- lux</div>
+          <div class="right-card" id="windspeed-card">-- m/s</div>
+          <div class="right-card" id="humidity-card">-- %</div>
+        </div>
+      </section>
+      <section class="bottom-block columns">
+        <div class="connected-group">
+          <div class="connected-card" id="co2-card">-- ppm</div>
+          <div class="connected-card" id="tvoc-card">-- ppb</div>
+          <div class="connected-card" id="electricity-card">-- kWh</div>
+        </div>
+        <div class="small-card-row">
+          <div class="small-card" id="precipitation-card">-- %</div>
+          <div class="small-card" id="icon-card">🌤️</div>
+        </div>
+      </section>
 
-   <!-- 植物觀測頁面 -->
-   <main class="main" id="plant-layout">
-     <div class="plant-top">
-       <div class="label">植物 PM2.5</div>
-       <div class="value" id="plant-pm25">--</div>
-     </div>
-     <div class="plant-bottom">
-       <div class="plant-bottom-card">
-         <div class="label">溫度</div>
-         <div class="value" id="plant-temp">-- °C</div>
-       </div>
-       <div class="plant-bottom-card">
-         <div class="label">濕度</div>
-         <div class="value" id="plant-hum">-- %</div>
-       </div>
-       <div class="plant-bottom-card">
-         <div class="label">土壤濕度</div>
-         <div class="value" id="plant-soil">--</div>
-       </div>
-     </div>
-   </main>
- </div>
+      <!-- 植物觀測格子 -->
+      <section class="top-block columns" id="plant-cards" style="display:none;">
+        <div class="pm25 plant-card">
+          <div class="pm25-label">土壤濕度</div>
+          <div class="pm25-value" id="soil-value">-- %</div>
+        </div>
+        <div class="pm25 plant-card">
+          <div class="pm25-label">光照強度</div>
+          <div class="pm25-value" id="plant-light">-- lux</div>
+        </div>
+        <div class="pm25 plant-card">
+          <div class="pm25-label">溫度</div>
+          <div class="pm25-value" id="plant-temp">-- °C</div>
+        </div>
+        <div class="pm25 plant-card">
+          <div class="pm25-label">1136</div>
+          <div class="pm25-value" id="plant-1136">--</div>
+        </div>
+      </section>
+    </main>
+  </div>
 </div>
 
-<script>
-// ===== 下拉選單切換 =====
-const sourceBtn = document.getElementById('source-selector');
-const sourceList = document.getElementById('source-list');
-
-sourceBtn.addEventListener('click', () => sourceList.classList.toggle('hidden'));
-
-sourceList.querySelectorAll('li').forEach(li => {
-  li.addEventListener('click', () => {
-    const src = li.dataset.source;
-    sourceBtn.textContent = li.textContent + ' ▼';
-    sourceList.classList.add('hidden');
-
-    const standardLayout = document.getElementById('standard-layout');
-    const plantLayout = document.getElementById('plant-layout');
-
-    if (src === 'E') { // 植物觀測
-      standardLayout.classList.add('hidden-layout');
-      plantLayout.classList.remove('hidden-layout');
-    } else {
-      standardLayout.classList.remove('hidden-layout');
-      plantLayout.classList.add('hidden-layout');
-    }
-  });
-});
-
-// ===== 側邊欄 menu 點擊示範 =====
-document.querySelectorAll('.menu div').forEach(btn => {
-  btn.addEventListener('click', () => {
-    alert(`你點了 ${btn.dataset.modal}`);
-  });
-});
-
-// ===== 時鐘 =====
-function updateClock() {
-  const now = new Date();
-  document.getElementById('date-display').textContent = now.toLocaleDateString();
-  document.getElementById('time-display').textContent = now.toLocaleTimeString();
-  requestAnimationFrame(updateClock);
-}
-updateClock();
-</script>
-
+<script src="main.js"></script>
 </body>
 </html>
