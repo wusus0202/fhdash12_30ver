@@ -7,7 +7,11 @@
 
 <style>
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f2f2f2;
+}
 
 /* ===== Header ===== */
 .header {
@@ -26,8 +30,13 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 }
 
 /* ===== Layout ===== */
-.app-container { height: calc(100vh - 70px); }
-.app { display: flex; height: 100%; }
+.app-container {
+  height: calc(100vh - 70px);
+}
+.app {
+  display: flex;
+  height: 100%;
+}
 
 /* ===== Sidebar ===== */
 .sidebar {
@@ -39,6 +48,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   flex-direction: column;
 }
 
+/* Dropdown */
 .dropdown-btn {
   width: 100%;
   padding: 12px;
@@ -46,11 +56,10 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   border: none;
   cursor: pointer;
 }
-
 .dropdown-list {
   list-style: none;
   padding: 0;
-  margin-top: 8px;
+  margin: 8px 0 0;
   background: #5b5555;
   border-radius: 8px;
 }
@@ -59,8 +68,11 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   padding: 10px;
   cursor: pointer;
 }
-.dropdown-list li:hover { background: #777; }
+.dropdown-list li:hover {
+  background: #777;
+}
 
+/* Menu */
 .menu {
   margin-top: 20px;
   display: flex;
@@ -73,9 +85,11 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   background: #5b5555;
   cursor: pointer;
 }
-.menu div:hover { background: #777; }
+.menu div:hover {
+  background: #777;
+}
 
-/* ===== Clock ===== */
+/* Clock */
 .clock {
   margin-top: auto;
   background: #5b5555;
@@ -84,8 +98,12 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   display: flex;
   gap: 12px;
 }
-.clock-svg { width: 80px; }
-.clock-digital { font-size: 13px; }
+.clock svg {
+  width: 80px;
+}
+.clock-digital {
+  font-size: 13px;
+}
 
 /* ===== Main ===== */
 .main {
@@ -96,12 +114,14 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   gap: 24px;
 }
 
-/* ===== Dashboard Grid ===== */
+/* ===== Grid ===== */
 .columns {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 24px;
 }
+
+/* Top */
 .pm25 {
   grid-column: 1 / span 2;
   background: #e8e8e8;
@@ -109,7 +129,9 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   padding: 24px;
   text-align: center;
 }
-.pm25-value { font-size: 32px; }
+.pm25-value {
+  font-size: 32px;
+}
 
 .right-stack {
   display: flex;
@@ -123,6 +145,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   text-align: center;
 }
 
+/* Bottom */
 .connected-group {
   grid-column: 1 / span 2;
   display: flex;
@@ -135,7 +158,9 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   text-align: center;
   border-right: 1px solid #ccc;
 }
-.connected-card:last-child { border-right: none; }
+.connected-card:last-child {
+  border-right: none;
+}
 
 .small-card-row {
   display: flex;
@@ -158,7 +183,9 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
   align-items: center;
   justify-content: center;
 }
-.modal-overlay.active { display: flex; }
+.modal-overlay.active {
+  display: flex;
+}
 .modal-content {
   background: #fff;
   width: 80%;
@@ -172,6 +199,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 .modal-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 .modal-close {
   cursor: pointer;
@@ -188,6 +216,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 </head>
 
 <body>
+
 <header class="header">
   芳和實驗中學環境現況
   <div id="data-status">即時顯示</div>
@@ -198,36 +227,39 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 
 <!-- ===== Sidebar ===== -->
 <aside class="sidebar">
-  <button class="dropdown-btn" id="source-btn">小芳堂 ▼</button>
-  <ul class="dropdown-list hidden" id="source-list">
-    <li>小芳堂</li>
-    <li>司令台</li>
-    <li>小田原</li>
-    <li>腳踏車練習場</li>
-    <li>植物觀測</li>
-  </ul>
 
-  <div class="menu">
-    <div data-modal="溫度">溫度</div>
-    <div data-modal="濕度">濕度</div>
-    <div data-modal="PM2.5">PM2.5</div>
-    <div data-modal="CO2">碳排放</div>
-  </div>
+<button class="dropdown-btn" id="source-btn">小芳堂 ▼</button>
+<ul class="dropdown-list hidden" id="source-list">
+  <li>小芳堂</li>
+  <li>司令台</li>
+  <li>小田原</li>
+  <li>腳踏車練習場</li>
+  <li>植物觀測</li>
+</ul>
 
-  <div class="clock">
-    <svg viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="45" stroke="#fff" fill="none"/>
-      <line id="sec" x1="50" y1="50" x2="50" y2="10" stroke="red"/>
-    </svg>
-    <div class="clock-digital">
-      <div id="date"></div>
-      <div id="time"></div>
-    </div>
+<div class="menu">
+  <div data-modal="溫度">溫度</div>
+  <div data-modal="濕度">濕度</div>
+  <div data-modal="日照">日照</div>
+  <div data-modal="PM2.5">PM2.5</div>
+  <div data-modal="CO2">碳排放</div>
+</div>
+
+<div class="clock">
+  <svg viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" stroke="#fff" fill="none"/>
+    <line id="sec" x1="50" y1="50" x2="50" y2="10" stroke="red"/>
+  </svg>
+  <div class="clock-digital">
+    <div id="date"></div>
+    <div id="time"></div>
   </div>
+</div>
+
 </aside>
 
-<!-- ===== Main Dashboard ===== -->
-<main class="main" id="standard-layout">
+<!-- ===== Main ===== -->
+<main class="main">
 
 <section class="columns">
   <div class="pm25">
@@ -268,43 +300,52 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
       <div class="modal-close" id="modal-close">✕</div>
     </div>
     <div class="modal-body">
-      歷史數據區（之後接圖表）
+      歷史數據區（之後可放圖表）
     </div>
   </div>
 </div>
 
 <script>
-/* Dropdown */
+/* ===== Dropdown ===== */
 const btn = document.getElementById('source-btn');
 const list = document.getElementById('source-list');
-btn.onclick = () => list.classList.toggle('hidden');
-list.querySelectorAll('li').forEach(li=>{
-  li.onclick=()=>{
+
+btn.onclick = () => {
+  list.classList.toggle('hidden');
+};
+
+list.querySelectorAll('li').forEach(li => {
+  li.onclick = () => {
     btn.textContent = li.textContent + ' ▼';
     list.classList.add('hidden');
   };
 });
 
-/* Modal */
+/* ===== Modal ===== */
 const modal = document.getElementById('modal');
-document.querySelectorAll('.menu div').forEach(d=>{
-  d.onclick=()=>{
-    document.getElementById('modal-title').textContent = d.textContent;
+const modalTitle = document.getElementById('modal-title');
+
+document.querySelectorAll('.menu div').forEach(item => {
+  item.onclick = () => {
+    modalTitle.textContent = item.textContent + ' 歷史數據';
     modal.classList.add('active');
   };
 });
-document.getElementById('modal-close').onclick=()=>modal.classList.remove('active');
 
-/* Clock */
-function tick(){
-  const now=new Date();
-  document.getElementById('date').textContent=now.toLocaleDateString();
-  document.getElementById('time').textContent=now.toLocaleTimeString();
-  document.getElementById('sec').setAttribute(
-    'transform',`rotate(${now.getSeconds()*6} 50 50)`
-  );
+document.getElementById('modal-close').onclick = () => {
+  modal.classList.remove('active');
+};
+
+/* ===== Clock ===== */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('date').textContent = now.toLocaleDateString();
+  document.getElementById('time').textContent = now.toLocaleTimeString();
+  document.getElementById('sec')
+    .setAttribute('transform', `rotate(${now.getSeconds()*6} 50 50)`);
 }
-setInterval(tick,1000); tick();
+setInterval(updateClock, 1000);
+updateClock();
 </script>
 
 </body>
