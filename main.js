@@ -1,148 +1,235 @@
-console.log('✅ main.js loaded');
-let currentSource = 'A';
-let currentPageName = '小芳堂';
-let isPlantMode = false;
-let dataFetchInterval = null;
-
-const sourceConfig = {
-  A: { name: '小芳堂', deviceId: 'B827EBC2994D', hasData: true },
-  B: { name: '司令台', deviceId: 'B827EBC2994D', hasData: true },
-  C: { name: '小田原', deviceId: 'DEVICE_C', hasData: false },
-  D: { name: '腳踏車練習場', deviceId: 'DEVICE_D', hasData: false },
-  E: { name: '植物觀測', deviceId: 'PLANT_DEVICE', hasData: true }
-};
-
-const PLANT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzfUbGWXNdxPdfW7R1c6H03X2g-711TN9L7I4Vn4vS1eyZlIIJtfsulAOz0Yl30-X1LpQ/exec';
-
-document.addEventListener('DOMContentLoaded', () => {
-  bindUI();
-  switchPage('A');
-  updateClock();
-  setInterval(updateClock, 1000);
-});
-
-function bindUI() {
-  const dropdownBtn = document.getElementById('source-selector');
-  const dropdownList = document.getElementById('source-list');
-  dropdownBtn.addEventListener('click', () => dropdownList.classList.toggle('hidden'));
-  document.addEventListener('click', e => {
-    if (!dropdownBtn.contains(e.target) && !dropdownList.contains(e.target))
-      dropdownList.classList.add('hidden');
-  });
-  document.querySelectorAll('#source-list li').forEach(item => {
-    item.addEventListener('click', () => {
-      switchPage(item.dataset.source);
-      dropdownList.classList.add('hidden');
-    });
-  });
-
-  const modal = document.getElementById('history-modal');
-  const modalTitle = document.getElementById('modal-title');
-  const modalType = document.getElementById('modal-type');
-  document.querySelectorAll('.menu div[data-modal]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      modalTitle.textContent = `${currentPageName} ${btn.textContent}`;
-      modalType.textContent = btn.textContent;
-      modal.classList.add('active');
-    });
-  });
-  document.getElementById('modal-close').onclick = () => modal.classList.remove('active');
-  modal.onclick = e => { if (e.target === modal) modal.classList.remove('active'); };
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f2f2f2;
 }
 
-function switchPage(source) {
-  currentSource = source;
-  currentPageName = sourceConfig[source].name;
-  document.getElementById('source-selector').textContent = currentPageName + ' ▼';
-
-  if (dataFetchInterval) { clearInterval(dataFetchInterval); dataFetchInterval = null; }
-
-  if (source === 'E') {
-    isPlantMode = true;
-    document.getElementById('standard-layout').style.display = 'none';
-    document.getElementById('plant-layout').style.display = 'flex';
-    updateDataStatus('🌱 植物即時數據', '#e8e8e8', '#888');
-    fetchPlantData();
-    dataFetchInterval = setInterval(fetchPlantData, 30000);
-  } else {
-    isPlantMode = false;
-    document.getElementById('plant-layout').style.display = 'none';
-    document.getElementById('standard-layout').style.display = 'flex';
-    if (sourceConfig[source].hasData) {
-      updateDataStatus('📡 連線中...', '#e8e8e8', '#888');
-      fetchData();
-      dataFetchInterval = setInterval(fetchData, 30000);
-    } else {
-      updateStaticData();
-      updateDataStatus('⚠️ 暫無數據', '#e8e8e8', '#888');
-    }
-  }
+/* ================= Top Header ================= */
+.header {
+  height: 70px;
+  background: #d9cecd;
+  color: #333;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
+}
+#data-status {
+  position: absolute;
+  right: 24px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
 }
 
-async function fetchPlantData() {
-  try {
-    // 抓取同域 Serverless Function
-    const res = await fetch("/api/getPlantData");
-    const data = await res.json();
-    console.log("植物資料:", data);
+/* ================= App Container ================= */
+.app-container { display: flex; flex-direction: column; height: 92vh; }
+.app { display: flex; flex: 1; }
 
-    if (data.length > 0) {
-      const latest = data[data.length - 1]; // 取最後一筆
-      document.getElementById('plant-pm25-value').textContent = latest["PM2.5"] + " μg/m³";
-      document.getElementById('plant-humidity').textContent = latest["濕度"] + " %";
-      document.getElementById('plant-temperature').textContent = latest["溫度"] + " °C";
-      document.getElementById('plant-soil-humidity').textContent = latest["土壤濕度"] + " %";
-      document.getElementById('plant-co2').textContent = latest["co2"] + " ppm";
-    }
+/* ================= Sidebar ================= */
+.sidebar {
+  width: 260px;
+  background: #4a4545;
+  color: #fff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.menu { display: flex; flex-direction: column; gap: 10px; }
+.menu div {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #777;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  background: #4a4545;
+}
+.menu div:hover { background: #666; }
 
-    updateDataStatus("✅ 植物資料正常", "#e8e8e8", "#333");
-  } catch (err) {
-    console.error("抓取植物資料失敗:", err);
-    updateDataStatus("❌ 植物資料斷線", "#e8e8e8", "#888");
-  }
+/* Dropdown styles */
+.dropdown-container { position: relative; margin-bottom: 10px; }
+.dropdown-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #777;
+  font-size: 14px;
+  cursor: pointer;
+  background: #fff !important;
+  color: #333 !important;
+  width: 100%;
+  text-align: left;
+}
+.dropdown-btn:hover { background: #f0f0f0 !important; }
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: #4a4545;
+  border: 1px solid #777;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.dropdown-list li {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #5a5555;
+  color: #fff;
+}
+.dropdown-list li:hover { background: #666; }
+.dropdown-list.hidden { display: none; }
+
+/* ================= EASY-READ SVG CLOCK ================= */
+.clock {
+  margin-top: auto;
+  height: 160px;
+  border-radius: 16px;
+  background: #5b5555;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  align-items: center;
+}
+.clock-svg { flex: 1; display: flex; align-items: center; justify-content: center; }
+.clock-digital { flex: 1.3; display: flex; flex-direction: column; justify-content: center; gap: 4px; height: 100%; }
+.date-display { font-size: 13px; opacity: 0.9; align-self: flex-start; }
+.time-display { font-size: 16px; font-weight: 600; letter-spacing: 1px; align-self: flex-start; }
+
+/* ================= STANDARD LAYOUT ================= */
+.main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; height: 100%; }
+.columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; height: 100%; }
+
+.top-block { flex: 2; }
+.pm25 {
+  grid-column: 1 / span 2;
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 20px;
+  padding: 16px;
+}
+.pm25-label { font-size: 20px; margin-bottom: 8px; }
+.pm25-value { font-size: 32px; font-weight: 500; }
+
+.right-stack { grid-column: 3; display: flex; flex-direction: column; gap: 16px; }
+.right-card {
+  flex: 1;
+  background: #e8e8e8;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 12px;
 }
 
+.bottom-block { flex: 1; }
+.connected-group { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; overflow: hidden; }
+.connected-card { flex: 1; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #888; }
+.connected-card:last-child { border-right: none; }
 
-async function fetchData() {
-  try {
-    const cfg = sourceConfig[currentSource];
-    const res = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${cfg.deviceId}`);
-    const data = await res.json();
-    document.getElementById('pm25-value').textContent = (data.s_d0 ?? '--') + ' μg/m³';
-    document.getElementById('temperature-card').textContent = (data.s_t0 ?? '--') + ' °C';
-    document.getElementById('humidity-card').textContent = (data.s_h0 ?? '--') + ' %';
-    document.getElementById('windspeed-card').textContent = (data.s_w0 ?? '--') + ' m/s';
-    document.getElementById('sunlight-card').textContent = (data.s_lux0 ?? '--') + ' lux';
-    document.getElementById('co2-card').textContent = (data.s_co2 ?? '--') + ' ppm';
-    document.getElementById('tvoc-card').textContent = (data.s_tvoc ?? '--') + ' ppb';
-    updateDataStatus('✅ 環境數據正常', '#e8e8e8', '#333');
-  } catch(e) {
-    console.error(e);
-    updateDataStatus('❌ 環境數據斷線', '#e8e8e8', '#888');
-  }
+.small-card-row { grid-column: 3; display: flex; gap: 24px; }
+.small-card {
+  flex: 1;
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 12px;
 }
 
-function updateStaticData() {
-  ['pm25-value','temperature-card','humidity-card','windspeed-card','sunlight-card','co2-card','tvoc-card'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.textContent = '--';
-  });
+/* ================= Plant Layout ================= */
+#plant-layout {
+  display: none;
+  padding: 24px;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
 }
+#plant-layout.active { display: flex; }
 
-function updateDataStatus(text,bg,color){
-  const el = document.getElementById('data-status');
-  el.textContent = text;
-  el.style.background = bg;
-  el.style.color = color;
+/* 上方 PM2.5 主卡 */
+.plant-top-pm25 {
+  flex: 2;
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 60px;
 }
+.plant-pm25-label { font-size: 28px; margin-bottom: 16px; }
+.plant-pm25-value { font-size: 64px; font-weight: 500; }
 
-function updateClock(){
-  const now = new Date();
-  const h = now.getHours() % 12, m = now.getMinutes(), s = now.getSeconds();
-  document.getElementById('hour-hand').style.transform = `rotate(${h*30+m*0.5}deg)`;
-  document.getElementById('minute-hand').style.transform = `rotate(${m*6}deg)`;
-  document.getElementById('second-hand').style.transform = `rotate(${s*6}deg)`;
-  const days=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
-  document.getElementById('date-display').textContent = `${days[now.getDay()]} ${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`;
-  document.getElementById('time-display').textContent = now.toLocaleTimeString('zh-TW',{hour12:false});
+/* 下方四個卡片 */
+.plant-bottom-row {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
 }
+.plant-bottom-card {
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 40px;
+}
+.plant-bottom-card .label { font-size: 18px; margin-bottom: 12px; opacity: 0.8; }
+.plant-bottom-card .value { font-size: 32px; font-weight: 500; }
+
+/* ================= Modal ================= */
+.modal-overlay {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.7);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; visibility:hidden;
+  transition: all 0.3s ease;
+}
+.modal-overlay.active { opacity:1; visibility:visible; }
+.modal-content {
+  background: #fff;
+  width: 80%; max-width:900px;
+  height: 70%;
+  border-radius:16px;
+  position: relative;
+  padding: 40px;
+  display:flex; flex-direction:column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
+}
+.modal-overlay.active .modal-content { transform: scale(1); }
+.modal-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; padding-bottom:20px; border-bottom:2px solid #eee; }
+.modal-title { font-size:28px; font-weight:600; color:#333; margin:0; }
+.modal-close { background:none; border:none; font-size:24px; cursor:pointer; color:#999; padding:8px; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; transition: all 0.2s; }
+.modal-close:hover { background:#f0f0f0; color:#333; }
+.modal-body { flex:1; background:#f8f9fa; border-radius:12px; padding:24px; overflow-y:auto; color:#666; font-size:16px; }
+.modal-body h3 { margin-top:0; color:#333; }
