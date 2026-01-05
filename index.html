@@ -5,6 +5,41 @@
 <title>FH EnviroDashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="stylesheet" href="style.css">
+<style>
+/* --- 僅列出植物觀測相關 CSS --- */
+#plant-layout { display: none; padding: 24px; flex-direction: column; gap: 12px; height: 100%; }
+#plant-layout.active { display: flex; }
+
+/* 上方大 PM2.5 卡片 */
+.plant-top-pm25 {
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 40px;
+}
+.plant-pm25-label { font-size: 28px; margin-bottom: 16px; }
+.plant-pm25-value { font-size: 64px; font-weight: 500; }
+
+/* 下方格子 */
+.plant-bottom-row { display: flex; gap: 12px; margin-top: 24px; }
+.plant-bottom-card {
+  flex: 1;
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 40px;
+}
+.plant-bottom-card .label { font-size: 18px; margin-bottom: 12px; opacity: 0.8; }
+.plant-bottom-card .value { font-size: 32px; font-weight: 500; }
+</style>
 </head>
 <body>
 <header class="header">
@@ -35,24 +70,9 @@
        <div data-modal="pm25">PM2.5</div>
        <div data-modal="electricity">用電量</div>
      </div>
-     <div class="clock" id="datetime">
-       <div class="clock-svg">
-         <svg id="clock-svg" viewBox="0 0 100 100">
-           <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-           <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
-           <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
-           <rect id="second-hand" x="49" y="16" width="2" height="34" rx="1" fill="#ff4444" transform-origin="50px 50px"/>
-           <circle cx="50" cy="50" r="4" fill="#fff"/>
-         </svg>
-       </div>
-       <div class="clock-digital">
-         <div class="date-display" id="date-display"></div>
-         <div class="time-display" id="time-display"></div>
-       </div>
-     </div>
    </aside>
 
-   <!-- =================== 標準頁面 =================== -->
+   <!-- 標準頁面 -->
    <main class="main" id="standard-layout">
      <section class="top-block columns">
        <div class="pm25" id="pm25-card">
@@ -79,58 +99,65 @@
      </section>
    </main>
 
-   <!-- =================== 植物觀測頁面 (新增/修改的部分) =================== -->
+   <!-- 植物觀測頁面 -->
    <main class="main" id="plant-layout">
-     <!-- 上方大格子 PM2.5 -->
-     <section class="plant-top-pm25">
+     <div class="plant-top-pm25">
        <div class="plant-pm25-label">PM2.5</div>
        <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
-     </section>
-
-     <!-- 下方小格子群 (新增 6 個格子) -->
-     <section class="plant-bottom-row">
+     </div>
+     <div class="plant-bottom-row">
        <div class="plant-bottom-card">
          <div class="label">溫度</div>
-         <div class="value" id="plant-temp-value">-- °C</div>
+         <div class="value" id="plant-temperature">-- °C</div>
        </div>
        <div class="plant-bottom-card">
          <div class="label">濕度</div>
-         <div class="value" id="plant-hum-value">-- %</div>
-       </div>
-       <div class="plant-bottom-card">
-         <div class="label">光照</div>
-         <div class="value" id="plant-light-value">-- lx</div>
+         <div class="value" id="plant-humidity">-- %</div>
        </div>
        <div class="plant-bottom-card">
          <div class="label">土壤濕度</div>
-         <div class="value" id="plant-soil-value">-- %</div>
-       </div>
-       <div class="plant-bottom-card">
-         <div class="label">CO₂</div>
-         <div class="value" id="plant-co2-value">-- ppm</div>
+         <div class="value" id="plant-soil">-- %</div>
        </div>
        <div class="plant-bottom-card">
          <div class="label">PM10</div>
-         <div class="value" id="plant-pm10-value">-- μg/m³</div>
+         <div class="value" id="plant-pm10">-- μg/m³</div>
        </div>
-     </section>
+     </div>
    </main>
+
  </div>
 </div>
 
-<div class="modal-overlay" id="history-modal">
- <div class="modal-content">
-   <div class="modal-header">
-     <h1 class="modal-title" id="modal-title"></h1>
-     <button class="modal-close" id="modal-close">&times;</button>
-   </div>
-   <div class="modal-body">
-     <h3>歷史數據圖表將顯示在這裡</h3>
-     <p>這是 <span id="modal-type"></span> 的歷史數據區域。</p>
-   </div>
- </div>
-</div>
+<script>
+// --- 切換頁面功能 ---
+const standardLayout = document.getElementById('standard-layout');
+const plantLayout = document.getElementById('plant-layout');
 
-<script src="main.js"></script>
+document.querySelectorAll('#source-list li').forEach(li => {
+  li.addEventListener('click', () => {
+    const src = li.dataset.source;
+    if (src === 'E') { // 植物觀測
+      standardLayout.style.display = 'none';
+      plantLayout.style.display = 'flex';
+    } else {
+      standardLayout.style.display = 'flex';
+      plantLayout.style.display = 'none';
+    }
+  });
+});
+
+// --- 下拉選單切換顯示 ---
+const dropdownBtn = document.getElementById('source-selector');
+const dropdownList = document.getElementById('source-list');
+dropdownBtn.addEventListener('click', () => {
+  dropdownList.classList.toggle('hidden');
+});
+dropdownList.querySelectorAll('li').forEach(item => {
+  item.addEventListener('click', () => {
+    dropdownBtn.textContent = item.textContent + ' ▼';
+    dropdownList.classList.add('hidden');
+  });
+});
+</script>
 </body>
 </html>
