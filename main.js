@@ -1,5 +1,4 @@
 console.log('✅ main.js loaded');
-
 let currentSource = 'A';
 let currentPageName = '小芳堂';
 let isPlantMode = false;
