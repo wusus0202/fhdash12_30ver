@@ -378,5 +378,101 @@ function updateDataStatus(text,bg,c) {
 }
 
 function updateClock() {
-  const now=new Date();
-  const hours=now.getHours
+  const now = new Date();
+
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+
+  const hourDeg = (hours % 12) * 30 + minutes * 0.5;
+  const minuteDeg = minutes * 6;
+  const secondDeg = seconds * 6;
+
+  document.getElementById('hour-hand').style.transform =
+    `rotate(${hourDeg}deg)`;
+  document.getElementById('minute-hand').style.transform =
+    `rotate(${minuteDeg}deg)`;
+  document.getElementById('second-hand').style.transform =
+    `rotate(${secondDeg}deg)`;
+
+  document.getElementById('date-display').textContent =
+    now.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+  document.getElementById('time-display').textContent =
+    now.toLocaleTimeString('zh-TW', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+}
+
+/* ===== Modal 控制（menu 點擊後跳出格子） ===== */
+const modal = document.getElementById('history-modal');
+const modalTitle = document.getElementById('modal-title');
+const modalBody = document.querySelector('.modal-body');
+
+document.querySelectorAll('.menu div[data-modal]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.modal;
+    modalTitle.textContent = btn.textContent;
+
+    modalBody.innerHTML = `
+      <h3>${btn.textContent} 歷史數據</h3>
+      <p>這裡之後可以放圖表（Chart.js / ECharts）</p>
+      <div style="
+        margin-top:20px;
+        padding:20px;
+        border-radius:12px;
+        background:#fff;
+        border:1px solid #ddd;
+      ">
+        即時數值：<strong>--</strong>
+      </div>
+    `;
+
+    modal.classList.add('active');
+  });
+});
+
+/* ===== Modal 關閉 ===== */
+document.getElementById('modal-close').onclick = () => {
+  modal.classList.remove('active');
+};
+
+modal.addEventListener('click', e => {
+  if (e.target === modal) modal.classList.remove('active');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') modal.classList.remove('active');
+});
+
+/* ===== 下拉選單 ===== */
+const dropdownBtn = document.getElementById('source-selector');
+const dropdownList = document.getElementById('source-list');
+
+dropdownBtn.addEventListener('click', () => {
+  dropdownList.classList.toggle('hidden');
+});
+
+document.querySelectorAll('#source-list li').forEach(li => {
+  li.addEventListener('click', () => {
+    dropdownBtn.textContent = li.textContent + ' ▼';
+    dropdownList.classList.add('hidden');
+  });
+});
+
+document.addEventListener('click', e => {
+  if (!dropdownBtn.contains(e.target) && !dropdownList.contains(e.target)) {
+    dropdownList.classList.add('hidden');
+  }
+});
+
+/* ===== 初始化 ===== */
+updateClock();
+setInterval(updateClock, 1000);
+</script>
