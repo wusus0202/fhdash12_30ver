@@ -4,8 +4,167 @@
 <meta charset="UTF-8" />
 <title>FH EnviroDashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="stylesheet" href="style.css">
+
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
+
+/* ================= Top Header ================= */
+.header {
+  height: 70px;
+  background: #d9cecd;
+  color: #333;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
+}
+#data-status {
+  position: absolute;
+  right: 24px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+/* ================= App Container ================= */
+.app-container { display: flex; flex-direction: column; height: 92vh; }
+.app { display: flex; flex: 1; }
+
+/* ================= Sidebar ================= */
+.sidebar {
+  width: 260px;
+  background: #4a4545;
+  color: #fff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.menu { display: flex; flex-direction: column; gap: 10px; }
+.menu div {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #777;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  background: #4a4545;
+  color: #fff;
+}
+.menu div:hover { background: #666; }
+
+/* Dropdown styles */
+.dropdown-container { position: relative; margin-bottom: 10px; }
+.dropdown-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #777;
+  font-size: 14px;
+  cursor: pointer;
+  background: #fff !important;
+  color: #333 !important;
+  width: 100%;
+  text-align: left;
+}
+.dropdown-btn:hover { background: #f0f0f0 !important; }
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: #4a4545;
+  border: 1px solid #777;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.dropdown-list li {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #5a5555;
+  color: #fff;
+}
+.dropdown-list li:hover { background: #666; }
+.dropdown-list.hidden { display: none; }
+
+/* ================= EASY-READ SVG CLOCK ================= */
+.clock {
+  margin-top: auto;
+  height: 160px;
+  border-radius: 16px;
+  background: #5b5555;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  align-items: center;
+}
+.clock-svg { flex: 1; display: flex; align-items: center; justify-content: center; }
+.clock-digital { flex: 1.3; display: flex; flex-direction: column; justify-content: center; gap: 4px; height: 100%; }
+.date-display { font-size: 13px; opacity: 0.9; align-self: flex-start; }
+.time-display { font-size: 16px; font-weight: 600; letter-spacing: 1px; align-self: flex-start; }
+
+/* ================= STANDARD LAYOUT ================= */
+.main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; height: 100%; }
+.columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; height: 100%; }
+.top-block { flex: 2; }
+.pm25 { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-size: 20px; padding: 16px; }
+.pm25-label { font-size: 20px; margin-bottom: 8px; }
+.pm25-value { font-size: 32px; font-weight: 500; }
+.right-stack { grid-column: 3; display: flex; flex-direction: column; gap: 16px; }
+.right-card { flex: 1; background: #e8e8e8; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #888; padding: 12px; }
+.bottom-block { flex: 1; }
+.connected-group { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; overflow: hidden; }
+.connected-card { flex: 1; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #888; }
+.connected-card:last-child { border-right: none; }
+.small-card-row { grid-column: 3; display: flex; gap: 24px; }
+.small-card { flex: 1; background: #e8e8e8; border-radius: 24px; display: flex; align-items: center; justify-content: center; color: #888; padding: 12px; }
+
+/* ================= Modal ================= */
+.modal-overlay {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.7);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; visibility:hidden;
+  transition: all 0.3s ease;
+  z-index: 2000;
+}
+.modal-overlay.active { opacity:1; visibility:visible; }
+.modal-content {
+  background: #fff;
+  width: 80%; max-width:900px;
+  height: 70%;
+  border-radius:16px;
+  position: relative;
+  padding: 40px;
+  display:flex; flex-direction:column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
+}
+.modal-overlay.active .modal-content { transform: scale(1); }
+.modal-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; padding-bottom:20px; border-bottom:2px solid #eee; }
+.modal-title { font-size:28px; font-weight:600; color:#333; margin:0; }
+.modal-close { background:none; border:none; font-size:24px; cursor:pointer; color:#999; padding:8px; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; transition: all 0.2s; }
+.modal-close:hover { background:#f0f0f0; color:#333; }
+.modal-body { flex:1; background:#f8f9fa; border-radius:12px; padding:24px; overflow-y:auto; color:#666; font-size:16px; }
+.modal-body h3 { margin-top:0; color:#333; }
+
+</style>
 </head>
+
 <body>
 <header class="header">
   芳和實驗中學環境現況
@@ -14,7 +173,7 @@
 
 <div class="app-container">
   <div class="app">
-    <!-- ================= Sidebar ================= -->
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="dropdown-container">
         <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
@@ -26,6 +185,7 @@
           <li data-source="E">植物觀測</li>
         </ul>
       </div>
+
       <div class="menu">
         <div data-modal="temperature">溫度</div>
         <div data-modal="sunlight">日照</div>
@@ -36,6 +196,7 @@
         <div data-modal="pm25">PM2.5</div>
         <div data-modal="electricity">用電量</div>
       </div>
+
       <div class="clock" id="datetime">
         <div class="clock-svg">
           <svg id="clock-svg" viewBox="0 0 100 100">
@@ -53,9 +214,8 @@
       </div>
     </aside>
 
-    <!-- ================= Main Content ================= -->
+    <!-- STANDARD LAYOUT -->
     <main class="main" id="standard-layout">
-      <!-- 標準環境格子 -->
       <section class="top-block columns">
         <div class="pm25" id="pm25-card">
           <div class="pm25-label">PM2.5</div>
@@ -79,30 +239,144 @@
           <div class="small-card" id="icon-card">🌤️</div>
         </div>
       </section>
-
-      <!-- 植物觀測格子 -->
-      <section class="top-block columns" id="plant-cards" style="display:none;">
-        <div class="pm25 plant-card">
-          <div class="pm25-label">土壤濕度</div>
-          <div class="pm25-value" id="soil-value">-- %</div>
-        </div>
-        <div class="pm25 plant-card">
-          <div class="pm25-label">光照強度</div>
-          <div class="pm25-value" id="plant-light">-- lux</div>
-        </div>
-        <div class="pm25 plant-card">
-          <div class="pm25-label">溫度</div>
-          <div class="pm25-value" id="plant-temp">-- °C</div>
-        </div>
-        <div class="pm25 plant-card">
-          <div class="pm25-label">1136</div>
-          <div class="pm25-value" id="plant-1136">--</div>
-        </div>
-      </section>
     </main>
+
+    <!-- PLANT LAYOUT (空，僅供 modal 彈出) -->
+    <main class="main" id="plant-layout"></main>
   </div>
 </div>
 
-<script src="main.js"></script>
-</body>
-</html>
+<!-- Modal -->
+<div class="modal-overlay" id="history-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h1 class="modal-title" id="modal-title"></h1>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <h3>歷史數據將顯示在這裡</h3>
+      <p>選擇左側 menu 即可查看歷史數據</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentSource = 'A';
+let currentPageName = '小芳堂';
+let isPlantMode = false;
+let dataFetchInterval = null;
+
+const sourceConfig = {
+  'A': { name: '小芳堂', deviceId: 'B827EBC2994D', hasData: true },
+  'B': { name: '司令台', deviceId: 'B827EBC2994D', hasData: true },
+  'C': { name: '小田原', deviceId: 'DEVICE_C', hasData: false },
+  'D': { name: '腳踏車練習場', deviceId: 'DEVICE_D', hasData: false },
+  'E': { name: '植物觀測', deviceId: 'PLANT_DEVICE', hasData: true }
+};
+
+const PLANT_GAS_URL = 'https://script.google.com/macros/s/.../exec';
+
+document.addEventListener('DOMContentLoaded', function() {
+  const standardLayout = document.getElementById('standard-layout');
+  const plantLayout = document.getElementById('plant-layout');
+  const dataStatus = document.getElementById('data-status');
+  const dropdownBtn = document.getElementById('source-selector');
+  const dropdownList = document.getElementById('source-list');
+  const modal = document.getElementById('history-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalType = document.getElementById('modal-type');
+
+  // Dropdown
+  dropdownBtn.addEventListener('click', () => dropdownList.classList.toggle('hidden'));
+  document.addEventListener('click', e => {
+    if (!dropdownBtn.contains(e.target) && !dropdownList.contains(e.target))
+      dropdownList.classList.add('hidden');
+  });
+  document.querySelectorAll('#source-list li').forEach(item => {
+    item.addEventListener('click', () => { switchPage(item.dataset.source); dropdownList.classList.add('hidden'); });
+  });
+
+  // Menu modal click
+  document.querySelectorAll('.menu div[data-modal]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const type = button.dataset.modal;
+      modalTitle.textContent = `${currentPageName} ${button.textContent}`;
+      modalType.textContent = button.textContent;
+
+      if (isPlantMode) {
+        try {
+          const response = await fetch(PLANT_GAS_URL);
+          const data = await response.json();
+          document.querySelector('.modal-body').innerHTML = `
+            <h3>${button.textContent} 歷史數據</h3>
+            <p>即時值: ${data[type] ?? '--'}</p>
+          `;
+        } catch {
+          document.querySelector('.modal-body').innerHTML = `
+            <h3>${button.textContent} 歷史數據</h3>
+            <p>無法取得數據</p>
+          `;
+        }
+      }
+
+      modal.classList.add('active');
+    });
+  });
+
+  // Modal close
+  document.getElementById('modal-close').onclick = () => modal.classList.remove('active');
+  modal.onclick = e => { if (e.target === modal) modal.classList.remove('active'); };
+  document.addEventListener('keydown', e => { if (e.key==='Escape') modal.classList.remove('active'); });
+
+  switchPage('A');
+  updateClock();
+  setInterval(updateClock, 1000);
+});
+
+function switchPage(source) {
+  currentSource = source;
+  currentPageName = sourceConfig[source].name;
+  document.getElementById('source-selector').textContent = `${currentPageName} ▼`;
+  if (dataFetchInterval) { clearInterval(dataFetchInterval); dataFetchInterval=null; }
+
+  if (source==='E') { // 植物觀測
+    isPlantMode = true;
+    document.getElementById('standard-layout').style.display='none';
+    document.getElementById('plant-layout').style.display='flex';
+    updateDataStatus('🌱 植物即時數據','#e8e8e8','#888');
+    fetchPlantData();
+    dataFetchInterval=setInterval(fetchPlantData,30000);
+  } else {
+    isPlantMode=false;
+    document.getElementById('plant-layout').style.display='none';
+    document.getElementById('standard-layout').style.display='flex';
+    if (sourceConfig[source].hasData) { fetchData(); dataFetchInterval=setInterval(fetchData,30000); }
+  }
+}
+
+async function fetchPlantData() {
+  try {
+    const response = await fetch(PLANT_GAS_URL);
+    const data = await response.json();
+    console.log('植物數據:', data);
+    updateDataStatus('✅ 植物數據正常','#e8e8e8','#333');
+  } catch {
+    updateDataStatus('❌ 植物數據斷線','#e8e8e8','#888');
+  }
+}
+
+async function fetchData() {
+  // 這裡保留原本標準數據獲取邏輯
+}
+
+function updateDataStatus(text,bg,c) {
+  const statusEl = document.getElementById('data-status');
+  statusEl.textContent=text;
+  statusEl.style.background=bg;
+  statusEl.style.color=c;
+  statusEl.style.border=`1px solid ${c==='#333'?'#ddd':'#bbb'}`;
+}
+
+function updateClock() {
+  const now=new Date();
+  const hours=now.getHours
