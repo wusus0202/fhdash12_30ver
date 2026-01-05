@@ -1,18 +1,160 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>FH EnviroDashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-/* ====== 你原本的 CSS（完全不動） ====== */
+/* ================= 基本 ================= */
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
-/* （中間 CSS 我完全照你給的，不省略、不改） */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: #f2f2f2;
+}
 
-/* 👉 為了省篇幅，CSS 與你剛剛貼的一模一樣 */
-/* 👉 你不用改 CSS，JS 才是關鍵 */
+/* ================= Header ================= */
+.header {
+  background: #1f2937;
+  color: #fff;
+  padding: 16px;
+  font-size: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ================= App Layout ================= */
+.app-container {
+  height: calc(100vh - 64px);
+}
+
+.app {
+  display: flex;
+  height: 100%;
+}
+
+/* ================= Sidebar ================= */
+.sidebar {
+  width: 260px;
+  background: #111827;
+  color: #fff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dropdown */
+.dropdown-container {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.dropdown-btn {
+  width: 100%;
+  padding: 10px;
+  background: #1f2937;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #374151;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 10;
+}
+
+.dropdown-list li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropdown-list li:hover {
+  background: #4b5563;
+}
+
+.hidden { display: none; }
+
+/* Menu */
+.menu div {
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.menu div:hover {
+  background: #374151;
+}
+
+/* Clock */
+.clock {
+  margin-top: auto;
+  text-align: center;
+}
+
+.clock svg {
+  width: 80px;
+  margin-bottom: 8px;
+}
+
+/* ================= Main ================= */
+.main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* ================= Modal ================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 520px;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.data-box {
+  margin-top: 20px;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+  font-size: 24px;
+}
 </style>
 </head>
 
@@ -51,113 +193,100 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
         <div data-modal="electricity">用電量</div>
       </div>
 
-      <!-- Clock -->
       <div class="clock">
-        <svg id="clock-svg" viewBox="0 0 100 100" width="80">
+        <svg viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-          <rect id="hour-hand" x="48" y="25" width="4" height="25" fill="#ddd" />
-          <rect id="minute-hand" x="49" y="18" width="2" height="32" fill="#fff" />
-          <rect id="second-hand" x="49" y="16" width="1" height="34" fill="#ff4444" />
+          <rect id="hour" x="48" y="25" width="4" height="25" fill="#ddd"/>
+          <rect id="minute" x="49" y="18" width="2" height="32" fill="#fff"/>
+          <rect id="second" x="49.5" y="16" width="1" height="34" fill="#ff4444"/>
         </svg>
-        <div>
-          <div id="date-display"></div>
-          <div id="time-display"></div>
-        </div>
+        <div id="date-display"></div>
+        <div id="time-display"></div>
       </div>
 
     </aside>
 
-    <!-- 主畫面 -->
+    <!-- Main -->
     <main class="main" id="standard-layout">
-      <h2>主畫面（正常顯示）</h2>
+      <h2>主畫面</h2>
+      <p>請從左側選擇項目</p>
     </main>
 
     <main class="main" id="plant-layout" style="display:none;">
       <h2>植物觀測</h2>
+      <p>請使用左側選單查看數據</p>
     </main>
 
   </div>
 </div>
 
 <!-- Modal -->
-<div class="modal-overlay" id="history-modal">
+<div class="modal-overlay" id="modal">
   <div class="modal-content">
     <div class="modal-header">
-      <h1 class="modal-title" id="modal-title"></h1>
+      <h2 id="modal-title"></h2>
       <button class="modal-close" id="modal-close">&times;</button>
     </div>
-    <div class="modal-body" id="modal-body">
-      內容
-    </div>
+    <div class="data-box" id="modal-body">--</div>
   </div>
 </div>
 
 <script>
-/* =====================================================
-   ✅ 唯一 JS 邏輯（沒有重複、沒有衝突）
-===================================================== */
-
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* ===== 變數 ===== */
-  let currentPageName = '小芳堂';
+  let currentPlace = '小芳堂';
 
-  const dropdownBtn = document.getElementById('source-selector');
-  const dropdownList = document.getElementById('source-list');
-
-  const modal = document.getElementById('history-modal');
+  const selector = document.getElementById('source-selector');
+  const list = document.getElementById('source-list');
+  const modal = document.getElementById('modal');
   const modalTitle = document.getElementById('modal-title');
   const modalBody = document.getElementById('modal-body');
 
-  const standardLayout = document.getElementById('standard-layout');
-  const plantLayout = document.getElementById('plant-layout');
+  const standard = document.getElementById('standard-layout');
+  const plant = document.getElementById('plant-layout');
 
-  /* ===== 下拉選單 ===== */
-  dropdownBtn.addEventListener('click', (e) => {
+  /* 下拉 */
+  selector.onclick = e => {
     e.stopPropagation();
-    dropdownList.classList.toggle('hidden');
-  });
+    list.classList.toggle('hidden');
+  };
 
   document.querySelectorAll('#source-list li').forEach(li => {
-    li.addEventListener('click', () => {
-      currentPageName = li.textContent;
-      dropdownBtn.textContent = currentPageName + ' ▼';
-      dropdownList.classList.add('hidden');
+    li.onclick = () => {
+      currentPlace = li.textContent;
+      selector.textContent = currentPlace + ' ▼';
+      list.classList.add('hidden');
 
       if (li.dataset.source === 'E') {
-        standardLayout.style.display = 'none';
-        plantLayout.style.display = 'block';
+        standard.style.display = 'none';
+        plant.style.display = 'block';
       } else {
-        standardLayout.style.display = 'block';
-        plantLayout.style.display = 'none';
+        standard.style.display = 'block';
+        plant.style.display = 'none';
       }
-    });
+    };
   });
 
-  document.addEventListener('click', () => {
-    dropdownList.classList.add('hidden');
-  });
+  document.addEventListener('click', () => list.classList.add('hidden'));
 
-  /* ===== menu → modal ===== */
-  document.querySelectorAll('.menu div').forEach(btn => {
-    btn.addEventListener('click', () => {
-      modalTitle.textContent = currentPageName + ' - ' + btn.textContent;
-      modalBody.innerHTML = `
-        <h3>${btn.textContent} 歷史數據</h3>
-        <div style="margin-top:20px;padding:20px;border-radius:12px;border:1px solid #ddd;">
-          即時數值：<strong>--</strong>
-        </div>
-      `;
+  /* Menu → Modal */
+  document.querySelectorAll('.menu div').forEach(item => {
+    item.onclick = () => {
+      modalTitle.textContent = currentPlace + '｜' + item.textContent;
+      modalBody.textContent = '--';
       modal.classList.add('active');
-    });
+    };
   });
 
-  /* ===== modal 關閉 ===== */
-  document.getElementById('modal-close').onclick = () => modal.classList.remove('active');
-  modal.onclick = e => { if (e.target === modal) modal.classList.remove('active'); };
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('active'); });
+  document.getElementById('modal-close').onclick = () => {
+    modal.classList.remove('active');
+  };
 
-  /* ===== 時鐘 ===== */
+  modal.onclick = e => {
+    if (e.target === modal) modal.classList.remove('active');
+  };
+
+  /* Clock */
   setInterval(() => {
     const now = new Date();
     document.getElementById('date-display').textContent = now.toLocaleDateString();
