@@ -81,19 +81,27 @@ function switchPage(source) {
 
 async function fetchPlantData() {
   try {
-    const res = await fetch(PLANT_GAS_URL);
+    // 抓取同域 Serverless Function
+    const res = await fetch("/api/getPlantData");
     const data = await res.json();
-    document.getElementById('plant-pm25-value').textContent = (data.pm25 ?? '--') + ' μg/m³';
-    document.getElementById('plant-humidity').textContent = (data.humidity ?? '--') + ' %';
-    document.getElementById('plant-temperature').textContent = (data.temperature ?? '--') + ' °C';
-    document.getElementById('plant-soil-humidity').textContent = (data.soil_moisture ?? '--') + ' %';
-    document.getElementById('plant-co2').textContent = (data.co2 ?? '--') + ' ppm';
-    updateDataStatus('✅ 植物數據正常', '#e8e8e8', '#333');
-  } catch(e) {
-    console.error(e);
-    updateDataStatus('❌ 植物數據斷線', '#e8e8e8', '#888');
+    console.log("植物資料:", data);
+
+    if (data.length > 0) {
+      const latest = data[data.length - 1]; // 取最後一筆
+      document.getElementById('plant-pm25-value').textContent = latest["PM2.5"] + " μg/m³";
+      document.getElementById('plant-humidity').textContent = latest["濕度"] + " %";
+      document.getElementById('plant-temperature').textContent = latest["溫度"] + " °C";
+      document.getElementById('plant-soil-humidity').textContent = latest["土壤濕度"] + " %";
+      document.getElementById('plant-co2').textContent = latest["co2"] + " ppm";
+    }
+
+    updateDataStatus("✅ 植物資料正常", "#e8e8e8", "#333");
+  } catch (err) {
+    console.error("抓取植物資料失敗:", err);
+    updateDataStatus("❌ 植物資料斷線", "#e8e8e8", "#888");
   }
 }
+
 
 async function fetchData() {
   try {
