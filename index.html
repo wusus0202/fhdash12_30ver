@@ -4,83 +4,288 @@
 <meta charset="UTF-8" />
 <title>FH EnviroDashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="stylesheet" href="style.css">
+<style>
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, -apple-system, sans-serif; background: #f2f2f2; }
+
+/* ================= Top Header ================= */
+.header {
+  height: 70px;
+  background: #d9cecd;
+  color: #333;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  font-size: 18px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
+}
+#data-status { position: absolute; right: 24px; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; border: 1px solid transparent; transition: all 0.3s ease; }
+
+/* ================= App Container ================= */
+.app-container { display: flex; flex-direction: column; height: 92vh; }
+.app { display: flex; flex: 1; }
+
+/* ================= Sidebar ================= */
+.sidebar {
+  width: 260px;
+  background: #4a4545;
+  color: #fff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.menu { display: flex; flex-direction: column; gap: 10px; }
+.menu div {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #777;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  background: #4a4545;
+}
+.menu div:hover { background: #666; }
+
+/* Dropdown styles */
+.dropdown-container { position: relative; margin-bottom: 10px; }
+.dropdown-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #777;
+  font-size: 14px;
+  cursor: pointer;
+  background: #fff !important;
+  color: #333 !important;
+  width: 100%;
+  text-align: left;
+}
+.dropdown-btn:hover { background: #f0f0f0 !important; }
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: #4a4545;
+  border: 1px solid #777;
+  border-radius: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.dropdown-list li { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #5a5555; color: #fff; }
+.dropdown-list li:hover { background: #666; }
+.dropdown-list.hidden { display: none; }
+
+/* ================= EASY-READ SVG CLOCK ================= */
+.clock {
+  margin-top: auto;
+  height: 160px;
+  border-radius: 16px;
+  background: #5b5555;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  align-items: center;
+}
+.clock-svg { flex: 1; display: flex; align-items: center; justify-content: center; }
+.clock-digital { flex: 1.3; display: flex; flex-direction: column; justify-content: center; gap: 4px; height: 100%; }
+.date-display { font-size: 13px; opacity: 0.9; align-self: flex-start; }
+.time-display { font-size: 16px; font-weight: 600; letter-spacing: 1px; align-self: flex-start; }
+
+/* ================= STANDARD LAYOUT ================= */
+.main { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 24px; height: 100%; }
+.columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; height: 100%; }
+
+.top-block { flex: 2; }
+.pm25 {
+  grid-column: 1 / span 2;
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 20px;
+  padding: 16px;
+}
+.pm25-label { font-size: 20px; margin-bottom: 8px; }
+.pm25-value { font-size: 32px; font-weight: 500; }
+
+.right-stack { grid-column: 3; display: flex; flex-direction: column; gap: 16px; }
+.right-card { flex: 1; background: #e8e8e8; border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #888; padding: 12px; }
+
+.bottom-block { flex: 1; }
+.connected-group { grid-column: 1 / span 2; background: #e8e8e8; border-radius: 24px; display: flex; overflow: hidden; }
+.connected-card { flex: 1; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #888; }
+.connected-card:last-child { border-right: none; }
+
+.small-card-row { grid-column: 3; display: flex; gap: 24px; }
+.small-card { flex: 1; background: #e8e8e8; border-radius: 24px; display: flex; align-items: center; justify-content: center; color: #888; padding: 12px; }
+
+/* ================= PLANT LAYOUT ================= */
+#plant-layout { display: none; padding: 24px; flex-direction: column; gap: 24px; height: 100%; }
+.plant-top-pm25 {
+  flex: 2;
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  font-size: 20px;
+  padding: 40px;
+}
+.plant-pm25-label { font-size: 28px; margin-bottom: 16px; }
+.plant-pm25-value { font-size: 64px; font-weight: 500; }
+
+.plant-bottom-row {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 24px;
+}
+.plant-bottom-card {
+  background: #e8e8e8;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #444;
+}
+.plant-bottom-card .label { font-size: 16px; margin-bottom: 12px; opacity: 0.8; }
+.plant-bottom-card .value { font-size: 28px; font-weight: 500; }
+</style>
 </head>
 <body>
+
 <header class="header">
  芳和實驗中學環境現況
  <div id="data-status">載入中...</div>
 </header>
 
 <div class="app-container">
- <div class="app">
-   <aside class="sidebar" id="sidebar">
-     <div class="dropdown-container">
-       <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
-       <ul class="dropdown-list hidden" id="source-list">
-         <li data-source="A">小芳堂</li>
-         <li data-source="B">司令台</li>
-         <li data-source="C">小田原</li>
-         <li data-source="D">腳踏車練習場</li>
-         <li data-source="E">植物觀測</li>
-       </ul>
-     </div>
-     <div class="menu">
-       <div data-modal="temperature">溫度</div>
-       <div data-modal="sunlight">日照</div>
-       <div data-modal="windspeed">風速</div>
-       <div data-modal="humidity">濕度</div>
-       <div data-modal="co2">碳排放</div>
-       <div data-modal="tvoc">有機物</div>
-       <div data-modal="pm25">PM2.5</div>
-       <div data-modal="electricity">用電量</div>
-     </div>
-     <div class="clock" id="datetime">
-       <div class="clock-svg">
-         <svg id="clock-svg" viewBox="0 0 100 100">
-           <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-           <rect id="hour-hand" x="48" y="25" width="4" height="25" rx="2" fill="#ddd" transform-origin="50px 50px"/>
-           <rect id="minute-hand" x="48.5" y="18" width="3" height="32" rx="1.5" fill="#fff" transform-origin="50px 50px"/>
-           <rect id="second-hand" x="49" y="16" width="2" height="34" rx="1" fill="#ff4444" transform-origin="50px 50px"/>
-           <circle cx="50" cy="50" r="4" fill="#fff"/>
-         </svg>
-       </div>
-       <div class="clock-digital">
-         <div class="date-display" id="date-display"></div>
-         <div class="time-display" id="time-display"></div>
-       </div>
-     </div>
-   </aside>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="dropdown-container">
+        <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
+        <ul class="dropdown-list hidden" id="source-list">
+          <li data-source="A">小芳堂</li>
+          <li data-source="B">司令台</li>
+          <li data-source="C">小田原</li>
+          <li data-source="D">腳踏車練習場</li>
+          <li data-source="E">植物觀測</li>
+        </ul>
+      </div>
+    </aside>
 
+    <!-- 標準環境頁面 -->
+    <main class="main" id="standard-layout">
+      <section class="top-block columns">
+        <div class="pm25" id="pm25-card">
+          <div class="pm25-label">PM2.5</div>
+          <div class="pm25-value" id="pm25-value">-- μg/m³</div>
+        </div>
+        <div class="right-stack">
+          <div class="right-card" id="temperature-card">-- °C</div>
+          <div class="right-card" id="sunlight-card">-- lux</div>
+          <div class="right-card" id="windspeed-card">-- m/s</div>
+          <div class="right-card" id="humidity-card">-- %</div>
+        </div>
+      </section>
+      <section class="bottom-block columns">
+        <div class="connected-group">
+          <div class="connected-card" id="co2-card">-- ppm</div>
+          <div class="connected-card" id="tvoc-card">-- ppb</div>
+          <div class="connected-card" id="electricity-card">-- kWh</div>
+        </div>
+        <div class="small-card-row">
+          <div class="small-card" id="precipitation-card">-- %</div>
+          <div class="small-card" id="icon-card">🌤️</div>
+        </div>
+      </section>
+    </main>
 
-<main class="main" id="plant-layout">
-  <!-- 上方 PM2.5 主卡 -->
-  <section class="plant-top-pm25">
-    <div class="plant-pm25-label">PM2.5</div>
-    <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
-  </section>
+    <!-- 植物觀測頁面 -->
+    <main class="main" id="plant-layout">
+      <section class="plant-top-pm25">
+        <div class="plant-pm25-label">PM2.5</div>
+        <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
+      </section>
+      <section class="plant-bottom-row">
+        <div class="plant-bottom-card">
+          <div class="label">溫度</div>
+          <div class="value" id="plant-temperature">-- °C</div>
+        </div>
+        <div class="plant-bottom-card">
+          <div class="label">濕度</div>
+          <div class="value" id="plant-humidity">-- %</div>
+        </div>
+        <div class="plant-bottom-card">
+          <div class="label">土壤濕度</div>
+          <div class="value" id="plant-soil">-- %</div>
+        </div>
+        <div class="plant-bottom-card">
+          <div class="label">CO₂</div>
+          <div class="value" id="plant-co2">-- ppm</div>
+        </div>
+        <div class="plant-bottom-card">
+          <div class="label">光照</div>
+          <div class="value" id="plant-light">-- lux</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
 
-  <!-- 下方環境參數卡片 -->
-  <section class="plant-bottom-row">
-    <div class="plant-bottom-card">
-      <div class="label">溫度</div>
-      <div class="value" id="plant-temperature">-- °C</div>
-    </div>
-    <div class="plant-bottom-card">
-      <div class="label">濕度</div>
-      <div class="value" id="plant-humidity">-- %</div>
-    </div>
-    <div class="plant-bottom-card">
-      <div class="label">土壤濕度</div>
-      <div class="value" id="plant-soil">-- %</div>
-    </div>
-    <div class="plant-bottom-card">
-      <div class="label">CO₂</div>
-      <div class="value" id="plant-co2">-- ppm</div>
-    </div>
-  </section>
-</main>
+<script>
+const sourceSelector = document.getElementById("source-selector");
+const sourceList = document.getElementById("source-list");
+const standardLayout = document.getElementById("standard-layout");
+const plantLayout = document.getElementById("plant-layout");
 
-<script src="main.js"></script>
+// dropdown toggle
+sourceSelector.addEventListener("click", () => {
+  sourceList.classList.toggle("hidden");
+});
+
+// switch layout
+sourceList.querySelectorAll("li").forEach(item => {
+  item.addEventListener("click", () => {
+    const source = item.dataset.source;
+    sourceSelector.innerText = item.innerText + " ▼";
+    sourceList.classList.add("hidden");
+    if (source === "E") {
+      standardLayout.style.display = "none";
+      plantLayout.style.display = "flex";
+    } else {
+      standardLayout.style.display = "flex";
+      plantLayout.style.display = "none";
+    }
+  });
+});
+
+// 模擬植物觀測數據
+function updatePlantTestData() {
+  document.getElementById("plant-pm25-value").innerText = (Math.random()*100).toFixed(1) + " μg/m³";
+  document.getElementById("plant-temperature").innerText = (20 + Math.random()*10).toFixed(1) + " °C";
+  document.getElementById("plant-humidity").innerText = (40 + Math.random()*40).toFixed(0) + " %";
+  document.getElementById("plant-soil").innerText = (30 + Math.random()*40).toFixed(0) + " %";
+  document.getElementById("plant-co2").innerText = (350 + Math.random()*200).toFixed(0) + " ppm";
+  document.getElementById("plant-light").innerText = (100 + Math.random()*900).toFixed(0) + " lux";
+}
+setInterval(updatePlantTestData, 3000);
+updatePlantTestData();
+</script>
 </body>
 </html>
