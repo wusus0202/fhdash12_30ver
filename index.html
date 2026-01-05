@@ -1,91 +1,82 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <title>FH EnviroDashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FH EnviroDashboard</title>
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+
 <header class="header">
   芳和實驗中學環境現況
   <div id="data-status">載入中...</div>
 </header>
 
 <div class="app-container">
-  <div class="app">
+  <aside class="sidebar">
+    <button id="source-btn" class="dropdown-btn">小芳堂 ▼</button>
+    <ul id="source-list" class="dropdown-list hidden">
+      <li>小芳堂</li>
+      <li>司令台</li>
+      <li>小田原</li>
+      <li>腳踏車練習場</li>
+      <li>植物觀測</li>
+    </ul>
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <button class="dropdown-btn" id="source-btn">小芳堂 ▼</button>
-      <ul class="dropdown-list hidden" id="source-list">
-        <li>小芳堂</li>
-        <li>司令台</li>
-        <li>小田原</li>
-        <li>腳踏車練習場</li>
-        <li>植物觀測</li>
-      </ul>
+    <div class="menu">
+      <div data-modal="溫度">溫度</div>
+      <div data-modal="濕度">濕度</div>
+      <div data-modal="日照">日照</div>
+      <div data-modal="PM2.5">PM2.5</div>
+      <div data-modal="CO2">碳排放</div>
+    </div>
 
-      <div class="menu">
-        <div data-modal="溫度">溫度</div>
-        <div data-modal="濕度">濕度</div>
-        <div data-modal="日照">日照</div>
-        <div data-modal="PM2.5">PM2.5</div>
-        <div data-modal="CO2">碳排放</div>
+    <div class="clock">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
+        <line id="sec" x1="50" y1="50" x2="50" y2="10" stroke="red" stroke-width="2"/>
+      </svg>
+      <div class="clock-digital">
+        <div id="date"></div>
+        <div id="time"></div>
       </div>
+    </div>
+  </aside>
 
-      <div class="clock">
-        <svg viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" fill="none" stroke="#fff"/>
-          <line id="sec" x1="50" y1="50" x2="50" y2="10" stroke="red"/>
-        </svg>
-        <div class="clock-digital">
-          <div id="date"></div>
-          <div id="time"></div>
-        </div>
+  <main class="main">
+    <div class="columns">
+      <div class="pm25">
+        <div>PM2.5</div>
+        <div class="pm25-value">-- μg/m³</div>
       </div>
-    </aside>
+      <div class="right-stack">
+        <div class="right-card">-- °C</div>
+        <div class="right-card">-- lux</div>
+        <div class="right-card">-- m/s</div>
+        <div class="right-card">-- %</div>
+      </div>
+    </div>
 
-    <!-- Main -->
-    <main class="main">
-      <section class="columns">
-        <div class="pm25">
-          <div>PM2.5</div>
-          <div class="pm25-value">-- μg/m³</div>
-        </div>
-
-        <div class="right-stack">
-          <div class="right-card">-- °C</div>
-          <div class="right-card">-- lux</div>
-          <div class="right-card">-- m/s</div>
-          <div class="right-card">-- %</div>
-        </div>
-      </section>
-
-      <section class="columns">
-        <div class="connected-group">
-          <div class="connected-card">-- ppm</div>
-          <div class="connected-card">-- ppb</div>
-          <div class="connected-card">-- kWh</div>
-        </div>
-
-        <div class="small-card-row">
-          <div class="small-card">-- %</div>
-          <div class="small-card">🌤️</div>
-        </div>
-      </section>
-    </main>
-
-  </div>
+    <div class="columns">
+      <div class="connected-group">
+        <div class="connected-card">-- ppm</div>
+        <div class="connected-card">-- ppb</div>
+        <div class="connected-card">-- kWh</div>
+      </div>
+      <div class="small-card-row">
+        <div class="small-card">-- %</div>
+        <div class="small-card">🌤️</div>
+      </div>
+    </div>
+  </main>
 </div>
 
-<!-- Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal-content">
     <div class="modal-header">
       <h2 id="modal-title"></h2>
-      <div class="modal-close" id="modal-close">✕</div>
+      <div id="modal-close" class="modal-close">✕</div>
     </div>
     <div class="modal-body">歷史數據顯示區</div>
   </div>
