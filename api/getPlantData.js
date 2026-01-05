@@ -2,7 +2,7 @@
 export default async function handler(req, res) {
   try {
     // 你的 Google Apps Script Web App URL (記得填上你自己的)
-    const GAS_URL = "https://script.google.com/macros/s/YOUR_GAS_ID/exec?action=read&limit=10";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
 
     // 從 GAS 拿資料
     const response = await fetch(GAS_URL);
