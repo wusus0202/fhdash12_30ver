@@ -53,32 +53,33 @@
    </aside>
 
 
-   <!-- 標準 + 植物頁面 -->
-   <main class="main" id="standard-layout">
-     <section class="top-block columns">
-       <div class="pm25" id="pm25-card">
-         <div class="pm25-label">PM2.5</div>
-         <div class="pm25-value" id="pm25-value">-- μg/m³</div>
-       </div>
-       <div class="right-stack">
-         <div class="right-card" id="temperature-card">-- °C</div>
-         <div class="right-card" id="sunlight-card">-- lux</div>
-         <div class="right-card" id="windspeed-card">-- m/s</div>
-         <div class="right-card" id="humidity-card">-- %</div>
-       </div>
-     </section>
-     <section class="bottom-block columns">
-       <div class="connected-group">
-         <div class="connected-card" id="co2-card">-- ppm</div>
-         <div class="connected-card" id="tvoc-card">-- ppb</div>
-         <div class="connected-card" id="electricity-card">-- kWh</div>
-       </div>
-       <div class="small-card-row">
-         <div class="small-card" id="precipitation-card">-- %</div>
-         <div class="small-card" id="icon-card">🌤️</div>
-       </div>
-     </section>
-   </main>
+<main class="main" id="plant-layout">
+  <!-- 上方 PM2.5 主卡 -->
+  <section class="plant-top-pm25">
+    <div class="plant-pm25-label">PM2.5</div>
+    <div class="plant-pm25-value" id="plant-pm25-value">-- μg/m³</div>
+  </section>
+
+  <!-- 下方環境參數卡片 -->
+  <section class="plant-bottom-row">
+    <div class="plant-bottom-card">
+      <div class="label">溫度</div>
+      <div class="value" id="plant-temperature">-- °C</div>
+    </div>
+    <div class="plant-bottom-card">
+      <div class="label">濕度</div>
+      <div class="value" id="plant-humidity">-- %</div>
+    </div>
+    <div class="plant-bottom-card">
+      <div class="label">土壤濕度</div>
+      <div class="value" id="plant-soil">-- %</div>
+    </div>
+    <div class="plant-bottom-card">
+      <div class="label">CO₂</div>
+      <div class="value" id="plant-co2">-- ppm</div>
+    </div>
+  </section>
+</main>
 
 <script src="main.js"></script>
 </body>
