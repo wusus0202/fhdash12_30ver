@@ -109,35 +109,38 @@
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
 
-        async function updateDashboard() {
-            try {
-                // 1. 從 GAS 抓取資料
-                const response = await fetch(GAS_URL);
-                const data = await response.json();
-
-                if (data && data.length > 0) {
-                    // 2. 取得最後一筆 (最新) 資料
-                    const lastData = data[data.length - 1];
-
-                    // 3. 更新畫面上的數值 (對應你 GAS 裡的中文標題)
-                    document.getElementById('plant-temperature').textContent = (lastData["溫度"] || "0") + " °C";
-                    document.getElementById('plant-humidity').textContent = (lastData["濕度"] || "0") + " %";
-                    document.getElementById('plant-soil-humidity').textContent = (lastData["土壤濕度"] || "0") + " %";
-                    document.getElementById('plant-co2').textContent = (lastData["CO2"] || "0") + " ppm";
-
-                    // 4. 更新狀態
-                    const statusEl = document.getElementById('data-status');
-                    statusEl.textContent = `● 數據已更新 (${lastData["時間"] || ""})`;
-                    statusEl.style.color = "#22c55e";
-                }
-            } catch (error) {
-                console.error("讀取錯誤:", error);
-                const statusEl = document.getElementById('data-status');
-                statusEl.textContent = "● 連線失敗，檢查網路或 GAS";
-                statusEl.style.color = "#ef4444";
-            }
+        <script>
+async function fetchPlantData() {
+    try {
+        const gasUrl = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
+        const res = await fetch(gasUrl);
+        const data = await res.json();
+        
+        if (data && data.length > 0) {
+            const last = data[data.length - 1]; 
+            
+            // 🔍 這裡是最關鍵的修正點：
+            // 1. 溫度
+            document.getElementById('plant-temperature').textContent = (last["溫度"] || "0") + " °C";
+            // 2. 濕度
+            document.getElementById('plant-humidity').textContent = (last["濕度"] || "0") + " %";
+            // 3. 土壤濕度
+            document.getElementById('plant-soil-humidity').textContent = (last["土壤濕度"] || "0") + " %";
+            
+            // 4. CO2 (特別注意：必須與 GAS 標題 "CO2" 大小寫完全一致)
+            // 如果顯示還是不對，請檢查你的試算表第一列標題是否為 "CO2"
+            const co2Val = last["CO2"] || last["co2"] || "0";
+            document.getElementById('plant-co2').textContent = co2Val + " ppm";
+            
+            document.getElementById('data-status').innerHTML = `● 植物監測站 已更新 (${last["時間"] || ""})`;
+            document.getElementById('data-status').style.color = '#2e7d32';
         }
-
+    } catch (e) { 
+        console.error("讀取失敗:", e); 
+        document.getElementById('data-status').innerHTML = `● 數據連線失敗`;
+    }
+}
+</script>
         // 啟動時先跑一次
         updateDashboard();
 
