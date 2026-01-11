@@ -1,88 +1,127 @@
-
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FH EnviroDashboard</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>芳和實驗中學環境現況 - 模組化版</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="header">
-  芳和實驗中學環境現況
-  <div id="data-status">載入中...</div>
-</header>
+<div class="header">芳和實驗中學環境現況<div id="data-status">● 數據載入中</div></div>
 
 <div class="app-container">
-  <aside class="sidebar">
-    <button id="source-btn" class="dropdown-btn">小芳堂 ▼</button>
-    <ul id="source-list" class="dropdown-list hidden">
-      <li>小芳堂</li>
-      <li>司令台</li>
-      <li>小田原</li>
-      <li>腳踏車練習場</li>
-      <li>植物觀測</li>
-    </ul>
-
-    <div class="menu">
-      <div data-modal="溫度">溫度</div>
-      <div data-modal="濕度">濕度</div>
-      <div data-modal="日照">日照</div>
-      <div data-modal="PM2.5">PM2.5</div>
-      <div data-modal="CO2">碳排放</div>
+    <div class="sidebar">
+        <div class="dropdown-container">
+            <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
+            <ul class="dropdown-list" id="source-list">
+                <li data-source="A">小芳堂</li>
+                <li data-source="B">司令台</li>
+                <li data-source="C">小田原</li>
+                <li data-source="D">腳踏車練習場</li>
+                <li data-source="E">植物觀測</li>
+            </ul>
+        </div>
+        
+        <div class="menu-buttons">
+            <button class="nav-btn" onclick="openModal('溫度')">溫度</button>
+            <button class="nav-btn" onclick="openModal('日照')">日照</button>
+            <button class="nav-btn" onclick="openModal('風速')">風速</button>
+            <button class="nav-btn" onclick="openModal('濕度')">濕度</button>
+            <button class="nav-btn" onclick="openModal('碳排放')">碳排放</button>
+            <button class="nav-btn" onclick="openModal('有機物')">有機物</button>
+            <button class="nav-btn" onclick="openModal('PM2.5')">PM2.5</button>
+            <button class="nav-btn" onclick="openModal('用電量')">用電量</button>
+        </div>
+        
+        <div class="sidebar-bottom">
+            <div class="analog-clock">
+                <div class="hand hour-hand" id="hr"></div>
+                <div class="hand min-hand" id="mn"></div>
+                <div class="hand sec-hand" id="sc"></div>
+            </div>
+            <div>
+                <div id="date-display" style="font-size:0.7rem">--</div>
+                <div id="time-display" style="font-size:0.8rem; font-weight:bold">00:00:00</div>
+            </div>
+        </div>
     </div>
 
-    <div class="clock">
-      <svg viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="none" stroke="#fff" stroke-width="4"/>
-        <line id="sec" x1="50" y1="50" x2="50" y2="10" stroke="red" stroke-width="2"/>
-      </svg>
-      <div class="clock-digital">
-        <div id="date"></div>
-        <div id="time"></div>
-      </div>
-    </div>
-  </aside>
+    <div class="main-content">
+        <div id="standard-layout" class="view-container">
+            <div class="row-top">
+                <div class="card gauge-card" id="pm25-section">
+                    <div class="canvas-container">
+                        <canvas id="pm25Gauge"></canvas>
+                        <div class="gauge-overlay">
+                            <div style="color:#aaa; font-size:1.1rem; font-weight: bold;">PM2.5</div>
+                            <div class="value" id="pm25-val">--</div>
+                            <div id="aqi-notice" class="aqi-notice">...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stack-column">
+                    <div class="card stack-item">
+                        <span class="card-label">溫度</span>
+                        <span class="card-value" id="temp-display">-- °C</span>
+                    </div>
+                    <div class="card stack-item">
+                        <span class="card-label">日照/光照</span>
+                        <span class="card-value" id="lux-display">--</span>
+                    </div>
+                    <div class="card stack-item">
+                        <span class="card-label" id="extra-label">風速</span>
+                        <span class="card-value" id="extra-display">--</span>
+                    </div>
+                    <div class="card stack-item">
+                        <span class="card-label">濕度</span>
+                        <span class="card-value" id="humi-display">-- %</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row-bottom">
+                <div class="info-group-triple">
+                    <div class="segment">
+                        <span class="card-label">CO2</span>
+                        <span class="card-value" id="co2-display">-- ppm</span>
+                    </div>
+                    <div class="segment">
+                        <span class="card-label">TVOC</span>
+                        <span class="card-value" id="tvoc-display">-- ppb</span>
+                    </div>
+                    <div class="segment">
+                        <span class="card-label">用電量</span>
+                        <span class="card-value" id="power-display">--</span>
+                    </div>
+                </div>
+                <div class="info-group-double">
+                    <div class="card half-card">
+                        <span class="card-label">降雨機率</span>
+                        <span class="card-value" id="precip-display">-- %</span>
+                    </div>
+                    <div class="card half-card">
+                        <span class="card-label">天氣狀態</span>
+                        <span class="card-value" id="weather-icon" style="font-size: 2rem;">⛅</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-  <main class="main">
-    <div class="columns">
-      <div class="pm25">
-        <div>PM2.5</div>
-        <div class="pm25-value">-- μg/m³</div>
-      </div>
-      <div class="right-stack">
-        <div class="right-card">-- °C</div>
-        <div class="right-card">-- lux</div>
-        <div class="right-card">-- m/s</div>
-        <div class="right-card">-- %</div>
-      </div>
+        <div id="no-data-layout" class="view-container hidden">
+            <div class="card" style="flex:1; font-size: 1.2rem;">⚠️ 該地點目前無感測器數據</div>
+        </div>
     </div>
-
-    <div class="columns">
-      <div class="connected-group">
-        <div class="connected-card">-- ppm</div>
-        <div class="connected-card">-- ppb</div>
-        <div class="connected-card">-- kWh</div>
-      </div>
-      <div class="small-card-row">
-        <div class="small-card">-- %</div>
-        <div class="small-card">🌤️</div>
-      </div>
-    </div>
-  </main>
 </div>
 
-<div class="modal-overlay" id="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 id="modal-title"></h2>
-      <div id="modal-close" class="modal-close">✕</div>
+<div class="modal-overlay" id="history-modal">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+        <h2 id="modal-title">歷史趨勢</h2>
+        <div class="chart-wrapper" id="chartParent"><canvas id="historyChart"></canvas></div>
     </div>
-    <div class="modal-body">歷史數據顯示區</div>
-  </div>
 </div>
 
-<script src="main.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
