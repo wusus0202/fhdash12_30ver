@@ -86,25 +86,28 @@ async function fetchPlantData() {
         const data = await res.json();
         
         if (data && data.length > 0) {
-            const last = data[data.length - 1];
+            // 抓取最後一筆 (最新) 的資料
+            const last = data[data.length - 1]; 
+            
+            // 💡 關鍵：這裡的名稱必須跟 GAS 的 appendRow 標題一模一樣
             updateUI(
-                last["PM2.5"] || 0, 
+                parseFloat(last["PM2.5"]) || 0, 
                 parseFloat(last["溫度"]), 
                 parseFloat(last["濕度"]), 
                 last["CO2"], 
-                "--", 
+                "--", // 植物觀測通常沒有 TVOC，給虛線
                 last["土壤濕度"] + " %"
             );
+            
             document.getElementById('data-status').innerHTML = `● 植物監測站 已更新`;
             document.getElementById('data-status').style.color = '#2e7d32';
         }
     } catch (e) { 
-        console.error("GAS Fetch Error:", e); 
+        console.error("GAS 讀取錯誤:", e); 
         document.getElementById('data-status').innerHTML = `● GAS 讀取失敗`;
         document.getElementById('data-status').style.color = '#d32f2f';
     }
 }
-
 function updateUI(pm25, temp, humi, co2, tvoc, extra) {
     document.getElementById('pm25-val').textContent = pm25 != null ? Math.round(pm25) : "--";
     const color = pm25 < 30 ? '#3aa02d' : (pm25 < 70 ? '#fffd21' : '#fa0000');
