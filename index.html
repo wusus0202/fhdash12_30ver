@@ -25,29 +25,17 @@
 
         .sidebar { width: 280px; background: var(--sidebar-color); color: white; padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; }
         
-        /* Dropdown */
         .dropdown-container { position: relative; margin-bottom: 20px; }
-        .dropdown-btn { 
-            width: 100%; padding: 15px; border-radius: 10px; border: none; 
-            background: white; text-align: left; font-weight: bold; cursor: pointer; font-size: 1rem;
-        }
-        .dropdown-list { 
-            position: absolute; top: 100%; left: 0; right: 0; background: #5a5555; 
-            border-radius: 0 0 10px 10px; list-style: none; z-index: 3000; display: none; 
-        }
+        .dropdown-btn { width: 100%; padding: 15px; border-radius: 10px; border: none; background: white; text-align: left; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: #5a5555; border-radius: 0 0 10px 10px; list-style: none; z-index: 3000; display: none; overflow: hidden; }
         .dropdown-list.show { display: block; }
         .dropdown-list li { padding: 12px 15px; border-bottom: 1px solid #6a6565; cursor: pointer; color: white; }
         .dropdown-list li:hover { background: #7a7575; }
 
-        /* Buttons */
         .menu-buttons { display: flex; flex-direction: column; gap: 10px; }
-        .nav-btn { 
-            background: transparent; border: 1px solid rgba(255,255,255,0.15); 
-            color: rgba(255,255,255,0.8); padding: 12px; border-radius: 12px; 
-            cursor: pointer; text-align: left; padding-left: 20px; font-size: 1rem;
-        }
+        .nav-btn { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); padding: 12px; border-radius: 12px; cursor: pointer; text-align: left; padding-left: 20px; font-size: 1rem; transition: all 0.2s; }
+        .nav-btn:hover { background: rgba(255,255,255,0.1); color: white; }
 
-        /* Clock */
         .sidebar-bottom { margin-top: auto; background: rgba(255,255,255,0.1); padding: 15px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; }
         .analog-clock { width: 55px; height: 55px; position: relative; border: 2px solid white; border-radius: 50%; flex-shrink: 0; }
         .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background: white; border-radius: 4px; transform: translateX(-50%); }
@@ -59,7 +47,7 @@
         .view-container { display: flex; flex-direction: column; gap: 20px; height: 100%; }
         .hidden { display: none !important; }
 
-        /* LASS Layout Styles */
+        /* LASS Layout */
         .row-top { flex: 2.2; display: flex; gap: 20px; }
         .row-bottom { flex: 1; display: flex; gap: 20px; }
         .card { background: var(--card-bg); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; position: relative; }
@@ -74,17 +62,19 @@
         .segment { flex: 1; border-right: 1px solid #d4d4d4; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 600; color: #888; }
         .segment:last-child { border-right: none; }
 
-        /* 植物專屬四宮格簡化版面 */
+        /* 植物簡化四格版面 (繼承風格) */
         #plant-layout { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; }
-        .plant-card { background: var(--card-bg); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .plant-label { font-size: 1.2rem; color: #aaa; margin-bottom: 10px; font-weight: bold; }
-        .plant-value { font-size: 3.5rem; font-weight: 800; color: #666; }
-        .plant-unit { font-size: 1.2rem; color: var(--accent-green); margin-left: 5px; }
+        .plant-card { background: var(--card-bg); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .p-label { font-size: 1.1rem; color: #aaa; margin-bottom: 5px; font-weight: bold; }
+        .p-value { font-size: 3.5rem; font-weight: 800; color: #666; }
+        .p-unit { font-size: 1.2rem; color: var(--accent-green); margin-left: 5px; }
 
+        /* Modal */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: white; padding: 30px; border-radius: var(--radius); width: 85%; max-width: 800px; position: relative; }
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 2rem; cursor: pointer; color: #999; border:none; background:none; }
+        .chart-wrapper { height: 350px; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -98,8 +88,6 @@
                 <ul class="dropdown-list" id="source-list">
                     <li data-source="A">小芳堂</li>
                     <li data-source="B">司令台</li>
-                    <li data-source="C">小田原</li>
-                    <li data-source="D">腳踏車練習場</li>
                     <li data-source="E">植物觀測</li>
                 </ul>
             </div>
@@ -136,8 +124,8 @@
                     </div>
                     <div class="stack-column">
                         <div class="card stack-item" id="temp-display">-- °C</div>
-                        <div class="card stack-item" id="lux-display">--</div>
-                        <div class="card stack-item" id="wind-display">--</div>
+                        <div class="card stack-item">-- Lux</div>
+                        <div class="card stack-item">-- m/s</div>
                         <div class="card stack-item" id="humi-display">-- %</div>
                     </div>
                 </div>
@@ -145,7 +133,7 @@
                     <div class="info-group-triple">
                         <div class="segment" id="co2-display">-- ppm</div>
                         <div class="segment" id="tvoc-display">-- ppb</div>
-                        <div class="segment" id="power-display">--</div>
+                        <div class="segment">-- W</div>
                     </div>
                     <div class="info-group-double">
                         <div class="card half-card" id="precip-display">-- %</div>
@@ -155,22 +143,10 @@
             </div>
 
             <div id="plant-layout" class="view-container hidden">
-                <div class="plant-card">
-                    <div class="plant-label">溫度</div>
-                    <div><span class="plant-value" id="p-temp">--</span><span class="plant-unit">°C</span></div>
-                </div>
-                <div class="plant-card">
-                    <div class="plant-label">濕度</div>
-                    <div><span class="plant-value" id="p-humi">--</span><span class="plant-unit">%</span></div>
-                </div>
-                <div class="plant-card">
-                    <div class="plant-label">土壤濕度</div>
-                    <div><span class="plant-value" id="p-soil">--</span><span class="plant-unit">%</span></div>
-                </div>
-                <div class="plant-card">
-                    <div class="plant-label">CO2</div>
-                    <div><span class="plant-value" id="p-co2">--</span><span class="plant-unit">ppm</span></div>
-                </div>
+                <div class="plant-card"><div class="p-label">溫度</div><div><span class="p-value" id="p-temp">--</span><span class="p-unit">°C</span></div></div>
+                <div class="plant-card"><div class="p-label">濕度</div><div><span class="p-value" id="p-humi">--</span><span class="p-unit">%</span></div></div>
+                <div class="plant-card"><div class="p-label">土壤濕度</div><div><span class="p-value" id="p-soil">--</span><span class="p-unit">%</span></div></div>
+                <div class="plant-card"><div class="p-label">CO2</div><div><span class="p-value" id="p-co2">--</span><span class="p-unit">ppm</span></div></div>
             </div>
 
             <div id="no-data-layout" class="view-container hidden">
@@ -179,17 +155,23 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">&times;</button>
+            <h2 id="modal-title">歷史趨勢</h2>
+            <div class="chart-wrapper" id="chartParent"><canvas id="historyChart"></canvas></div>
+        </div>
+    </div>
+
     <script>
         const config = {
             'A': { name: '小芳堂', id: 'B827EB63D1C8', type: 'lass' },
             'B': { name: '司令台', id: 'B827EBC2994D', type: 'lass' },
-            'C': { name: '小田原', type: 'none' },
-            'D': { name: '腳踏車練習場', type: 'none' },
             'E': { name: '植物觀測', type: 'gas' }
         };
 
-        const PLANT_GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
-        let currentSrc = 'A', gauge, dataTimer;
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
+        let currentSrc = 'A', gauge, historyChart, dataTimer;
 
         window.onload = () => {
             initGauge();
@@ -227,8 +209,6 @@
                 document.getElementById('plant-layout').classList.remove('hidden');
                 fetchPlantData();
                 dataTimer = setInterval(fetchPlantData, 30000);
-            } else {
-                document.getElementById('no-data-layout').classList.remove('hidden');
             }
         }
 
@@ -237,8 +217,7 @@
                 const res = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${config[currentSrc].id}`);
                 const json = await res.json();
                 const d = json.feeds[0][Object.keys(json.feeds[0])[0]];
-
-                // LASS 原有邏輯：顯示裝置 ID
+                
                 document.getElementById('pm25-val').textContent = Math.round(d.s_d0);
                 document.getElementById('temp-display').textContent = `${d.s_t0.toFixed(1)} °C`;
                 document.getElementById('humi-display').textContent = `${d.s_h0.toFixed(0)} %`;
@@ -251,22 +230,20 @@
         }
 
         async function fetchPlantData() {
-            const statusEl = document.getElementById('data-status');
-            statusEl.innerHTML = `● ESP32 同步中...`;
-            statusEl.style.color = '#777';
+            const status = document.getElementById('data-status');
+            status.innerHTML = `● ESP32 同步中...`;
+            status.style.color = '#777';
             try {
-                const res = await fetch(PLANT_GAS_URL);
+                const res = await fetch(GAS_URL);
                 const data = await res.json();
                 const last = data[data.length - 1];
-                
                 document.getElementById('p-temp').textContent = last["溫度"] || "--";
                 document.getElementById('p-humi').textContent = last["濕度"] || "--";
                 document.getElementById('p-soil').textContent = last["土壤濕度"] || "--";
                 document.getElementById('p-co2').textContent = last["co2"] || last["CO2"] || "0";
-                
-                statusEl.innerHTML = `● ESP32 同步完成`;
-                statusEl.style.color = '#2e7d32';
-            } catch (e) { statusEl.innerHTML = `● ESP32 連線失敗`; }
+                status.innerHTML = `● ESP32 同步完成`;
+                status.style.color = '#2e7d32';
+            } catch (e) { status.innerHTML = `● ESP32 連線失敗`; }
         }
 
         function initGauge() {
@@ -285,6 +262,26 @@
             gauge.update();
         }
 
+        function openModal(t) {
+            document.getElementById('modal-title').textContent = t + " 歷史趨勢";
+            document.getElementById('history-modal').classList.add('active');
+            const parent = document.getElementById('chartParent');
+            parent.innerHTML = '<canvas id="historyChart"></canvas>';
+            setTimeout(() => {
+                const ctx = document.getElementById('historyChart').getContext('2d');
+                historyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+                        datasets: [{ label: t, data: [15, 22, 28, 24, 19, 21], borderColor: '#4a4545', tension: 0.4, fill: true, backgroundColor: 'rgba(74, 69, 69, 0.1)' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }, 50);
+        }
+
+        function closeModal() { document.getElementById('history-modal').classList.remove('active'); }
+
         function updateClock() {
             const now = new Date();
             const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
@@ -294,8 +291,6 @@
             document.getElementById('time-display').textContent = now.toLocaleTimeString('zh-TW', {hour12: false});
             document.getElementById('date-display').textContent = now.toLocaleDateString('zh-TW', { weekday: 'long', month: 'numeric', day: 'numeric' });
         }
-        
-        function openModal(t) { /* 保持原樣 */ }
     </script>
 </body>
 </html>
