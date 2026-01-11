@@ -119,25 +119,33 @@ async function fetchPlantData() {
         if (data && data.length > 0) {
             const last = data[data.length - 1]; 
             
-            // 🔍 這裡是最關鍵的修正點：
-            // 1. 溫度
-            document.getElementById('plant-temperature').textContent = (last["溫度"] || "0") + " °C";
-            // 2. 濕度
-            document.getElementById('plant-humidity').textContent = (last["濕度"] || "0") + " %";
-            // 3. 土壤濕度
-            document.getElementById('plant-soil-humidity').textContent = (last["土壤濕度"] || "0") + " %";
+            // 根據您的試算表截圖，標題分別是：溫度, 濕度, co2, 土壤濕度
             
-            // 4. CO2 (特別注意：必須與 GAS 標題 "CO2" 大小寫完全一致)
-            // 如果顯示還是不對，請檢查你的試算表第一列標題是否為 "CO2"
-            const co2Val = last["CO2"] || last["co2"] || "0";
+            // 溫度更新
+            const tempVal = last["溫度"] || "0";
+            document.getElementById('plant-temperature').textContent = tempVal + " °C";
+            
+            // 濕度更新
+            const humiVal = last["濕度"] || "0";
+            document.getElementById('plant-humidity').textContent = humiVal + " %";
+            
+            // 土壤濕度更新
+            const soilVal = last["土壤濕度"] || "0";
+            document.getElementById('plant-soil-humidity').textContent = soilVal + " %";
+            
+            // CO2 更新 (關鍵修正：改為讀取小寫的 "co2")
+            const co2Val = last["co2"] || "0";
             document.getElementById('plant-co2').textContent = co2Val + " ppm";
             
-            document.getElementById('data-status').innerHTML = `● 植物監測站 已更新 (${last["時間"] || ""})`;
-            document.getElementById('data-status').style.color = '#2e7d32';
+            // 更新同步狀態
+            const statusLabel = document.querySelector('.status-text') || document.getElementById('data-status');
+            if (statusLabel) {
+                statusLabel.innerHTML = `● 植物監測站 已更新 (${last["時間"] || ""})`;
+                statusLabel.style.color = '#2e7d32';
+            }
         }
     } catch (e) { 
         console.error("讀取失敗:", e); 
-        document.getElementById('data-status').innerHTML = `● 數據連線失敗`;
     }
 }
 </script>
