@@ -3,125 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>芳和實驗中學環境現況 - 模組化版</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <title>植物監測儀表板</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-main: #f8fafc;
+            --accent-green: #22c55e;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #data-status {
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        /* 四宮格排版 */
+        .plant-grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .plant-bottom-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .label {
+            color: #94a3b8;
+            font-size: 18px;
+        }
+
+        .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        @media (max-width: 500px) {
+            .plant-grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div class="header">芳和實驗中學環境現況<div id="data-status">● 數據載入中</div></div>
-
-<div class="app-container">
-    <div class="sidebar">
-        <div class="dropdown-container">
-            <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
-            <ul class="dropdown-list" id="source-list">
-                <li data-source="A">小芳堂</li>
-                <li data-source="B">司令台</li>
-                <li data-source="C">小田原</li>
-                <li data-source="D">腳踏車練習場</li>
-                <li data-source="E">植物觀測</li>
-            </ul>
-        </div>
-        
-        <div class="menu-buttons">
-            <button class="nav-btn" onclick="openModal('溫度')">溫度</button>
-            <button class="nav-btn" onclick="openModal('日照')">日照</button>
-            <button class="nav-btn" onclick="openModal('風速')">風速</button>
-            <button class="nav-btn" onclick="openModal('濕度')">濕度</button>
-            <button class="nav-btn" onclick="openModal('碳排放')">碳排放</button>
-            <button class="nav-btn" onclick="openModal('有機物')">有機物</button>
-            <button class="nav-btn" onclick="openModal('PM2.5')">PM2.5</button>
-            <button class="nav-btn" onclick="openModal('用電量')">用電量</button>
-        </div>
-        
-        <div class="sidebar-bottom">
-            <div class="analog-clock">
-                <div class="hand hour-hand" id="hr"></div>
-                <div class="hand min-hand" id="mn"></div>
-                <div class="hand sec-hand" id="sc"></div>
-            </div>
-            <div>
-                <div id="date-display" style="font-size:0.7rem">--</div>
-                <div id="time-display" style="font-size:0.8rem; font-weight:bold">00:00:00</div>
-            </div>
-        </div>
+    <div class="header">
+        <h2>🌿 植物環境監測站</h2>
+        <div id="data-status">● 正在連線中...</div>
     </div>
 
-    <div class="main-content">
-        <div id="standard-layout" class="view-container">
-            <div class="row-top">
-                <div class="card gauge-card" id="pm25-section">
-                    <div class="canvas-container">
-                        <canvas id="pm25Gauge"></canvas>
-                        <div class="gauge-overlay">
-                            <div style="color:#aaa; font-size:1.1rem; font-weight: bold;">PM2.5</div>
-                            <div class="value" id="pm25-val">--</div>
-                            <div id="aqi-notice" class="aqi-notice">...</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="stack-column">
-                    <div class="card stack-item">
-                        <span class="card-label">溫度</span>
-                        <span class="card-value" id="temp-display">-- °C</span>
-                    </div>
-                    <div class="card stack-item">
-                        <span class="card-label">日照/光照</span>
-                        <span class="card-value" id="lux-display">--</span>
-                    </div>
-                    <div class="card stack-item">
-                        <span class="card-label" id="extra-label">風速</span>
-                        <span class="card-value" id="extra-display">--</span>
-                    </div>
-                    <div class="card stack-item">
-                        <span class="card-label">濕度</span>
-                        <span class="card-value" id="humi-display">-- %</span>
-                    </div>
-                </div>
-            </div>
-            <div class="row-bottom">
-                <div class="info-group-triple">
-                    <div class="segment">
-                        <span class="card-label">CO2</span>
-                        <span class="card-value" id="co2-display">-- ppm</span>
-                    </div>
-                    <div class="segment">
-                        <span class="card-label">TVOC</span>
-                        <span class="card-value" id="tvoc-display">-- ppb</span>
-                    </div>
-                    <div class="segment">
-                        <span class="card-label">用電量</span>
-                        <span class="card-value" id="power-display">--</span>
-                    </div>
-                </div>
-                <div class="info-group-double">
-                    <div class="card half-card">
-                        <span class="card-label">降雨機率</span>
-                        <span class="card-value" id="precip-display">-- %</span>
-                    </div>
-                    <div class="card half-card">
-                        <span class="card-label">天氣狀態</span>
-                        <span class="card-value" id="weather-icon" style="font-size: 2rem;">⛅</span>
-                    </div>
-                </div>
-            </div>
+    <main class="plant-grid-container">
+        <div class="plant-bottom-card">
+            <div class="label">溫度</div>
+            <div class="value" id="plant-temperature">-- °C</div>
         </div>
 
-        <div id="no-data-layout" class="view-container hidden">
-            <div class="card" style="flex:1; font-size: 1.2rem;">⚠️ 該地點目前無感測器數據</div>
+        <div class="plant-bottom-card">
+            <div class="label">濕度</div>
+            <div class="value" id="plant-humidity">-- %</div>
         </div>
-    </div>
-</div>
 
-<div class="modal-overlay" id="history-modal">
-    <div class="modal-content">
-        <button class="close-modal" onclick="closeModal()">&times;</button>
-        <h2 id="modal-title">歷史趨勢</h2>
-        <div class="chart-wrapper" id="chartParent"><canvas id="historyChart"></canvas></div>
-    </div>
-</div>
+        <div class="plant-bottom-card">
+            <div class="label">土壤濕度</div>
+            <div class="value" id="plant-soil-humidity">-- %</div>
+        </div>
 
-<script src="script.js"></script>
+        <div class="plant-bottom-card">
+            <div class="label">CO2</div>
+            <div class="value" id="plant-co2">-- ppm</div>
+        </div>
+    </main>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
+
+        async function updateDashboard() {
+            try {
+                // 1. 從 GAS 抓取資料
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+
+                if (data && data.length > 0) {
+                    // 2. 取得最後一筆 (最新) 資料
+                    const lastData = data[data.length - 1];
+
+                    // 3. 更新畫面上的數值 (對應你 GAS 裡的中文標題)
+                    document.getElementById('plant-temperature').textContent = (lastData["溫度"] || "0") + " °C";
+                    document.getElementById('plant-humidity').textContent = (lastData["濕度"] || "0") + " %";
+                    document.getElementById('plant-soil-humidity').textContent = (lastData["土壤濕度"] || "0") + " %";
+                    document.getElementById('plant-co2').textContent = (lastData["CO2"] || "0") + " ppm";
+
+                    // 4. 更新狀態
+                    const statusEl = document.getElementById('data-status');
+                    statusEl.textContent = `● 數據已更新 (${lastData["時間"] || ""})`;
+                    statusEl.style.color = "#22c55e";
+                }
+            } catch (error) {
+                console.error("讀取錯誤:", error);
+                const statusEl = document.getElementById('data-status');
+                statusEl.textContent = "● 連線失敗，檢查網路或 GAS";
+                statusEl.style.color = "#ef4444";
+            }
+        }
+
+        // 啟動時先跑一次
+        updateDashboard();
+
+        // 每 30 秒自動更新一次
+        setInterval(updateDashboard, 30000);
+    </script>
 </body>
 </html>
