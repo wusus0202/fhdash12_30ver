@@ -3,157 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>植物監測儀表板</title>
+    <title>智慧植物監測儀表板</title>
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --text-main: #f8fafc;
-            --accent-green: #22c55e;
-        }
+        :root { --bg: #0f172a; --card: rgba(255,255,255,0.05); --green: #22c55e; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; }
+        
+        /* 側邊欄 */
+        .sidebar { width: 200px; background: rgba(0,0,0,0.3); padding: 20px; display: flex; flex-direction: column; gap: 15px; border-right: 1px solid rgba(255,255,255,0.1); }
+        .nav-item { padding: 12px; border-radius: 8px; cursor: pointer; color: #94a3b8; transition: 0.3s; }
+        .nav-item.active { background: var(--green); color: white; }
 
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .header {
-            width: 100%;
-            max-width: 800px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        #data-status {
-            font-size: 14px;
-            transition: color 0.3s;
-        }
-
-        /* 四宮格排版 */
-        .plant-grid-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .plant-bottom-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .label {
-            color: #94a3b8;
-            font-size: 18px;
-        }
-
-        .value {
-            font-size: 32px;
-            font-weight: bold;
-            color: var(--accent-green);
-        }
-
-        @media (max-width: 500px) {
-            .plant-grid-container {
-                grid-template-columns: 1fr;
-            }
-        }
+        /* 主畫面 */
+        .main-content { flex: 1; padding: 40px; display: flex; flex-direction: column; gap: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 四宮格 */
+        .plant-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
+        .stat-card { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .label { color: #94a3b8; font-size: 1.2rem; margin-bottom: 10px; }
+        .value { font-size: 2.5rem; font-weight: bold; color: var(--green); }
+        
+        #data-status { font-size: 14px; color: #94a3b8; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h2>🌿 植物環境監測站</h2>
-        <div id="data-status">● 正在連線中...</div>
+    <div class="sidebar">
+        <div class="nav-item active">🌿 植物監測</div>
+        <div class="nav-item">📊 歷史數據</div>
+        <div class="nav-item">⚙️ 設定</div>
     </div>
 
-    <main class="plant-grid-container">
-        <div class="plant-bottom-card">
-            <div class="label">溫度</div>
-            <div class="value" id="plant-temperature">-- °C</div>
+    <div class="main-content">
+        <div class="header">
+            <h2>智慧植物監測儀表板</h2>
+            <div id="data-status">● 同步中...</div>
         </div>
 
-        <div class="plant-bottom-card">
-            <div class="label">濕度</div>
-            <div class="value" id="plant-humidity">-- %</div>
+        <div class="plant-grid">
+            <div class="stat-card">
+                <div class="label">溫度</div>
+                <div class="value" id="plant-temp">-- °C</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">濕度</div>
+                <div class="value" id="plant-humi">-- %</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">土壤濕度</div>
+                <div class="value" id="plant-soil">-- %</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">CO2</div>
+                <div class="value" id="plant-co2">-- ppm</div>
+            </div>
         </div>
-
-        <div class="plant-bottom-card">
-            <div class="label">土壤濕度</div>
-            <div class="value" id="plant-soil-humidity">-- %</div>
-        </div>
-
-        <div class="plant-bottom-card">
-            <div class="label">CO2</div>
-            <div class="value" id="plant-co2">-- ppm</div>
-        </div>
-    </main>
+    </div>
 
     <script>
         const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
 
-        <script>
-async function fetchPlantData() {
-    try {
-        const gasUrl = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
-        const res = await fetch(gasUrl);
-        const data = await res.json();
-        
-        if (data && data.length > 0) {
-            const last = data[data.length - 1]; 
-            
-            // 根據您的試算表截圖，標題分別是：溫度, 濕度, co2, 土壤濕度
-            
-            // 溫度更新
-            const tempVal = last["溫度"] || "0";
-            document.getElementById('plant-temperature').textContent = tempVal + " °C";
-            
-            // 濕度更新
-            const humiVal = last["濕度"] || "0";
-            document.getElementById('plant-humidity').textContent = humiVal + " %";
-            
-            // 土壤濕度更新
-            const soilVal = last["土壤濕度"] || "0";
-            document.getElementById('plant-soil-humidity').textContent = soilVal + " %";
-            
-            // CO2 更新 (關鍵修正：改為讀取小寫的 "co2")
-            const co2Val = last["co2"] || "0";
-            document.getElementById('plant-co2').textContent = co2Val + " ppm";
-            
-            // 更新同步狀態
-            const statusLabel = document.querySelector('.status-text') || document.getElementById('data-status');
-            if (statusLabel) {
-                statusLabel.innerHTML = `● 植物監測站 已更新 (${last["時間"] || ""})`;
-                statusLabel.style.color = '#2e7d32';
+        async function updateData() {
+            try {
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                
+                if (data && data.length > 0) {
+                    const last = data[data.length - 1];
+                    console.log("最新數據:", last);
+
+                    // 1. 溫度
+                    document.getElementById('plant-temp').textContent = (last["溫度"] || "0") + " °C";
+                    // 2. 濕度
+                    document.getElementById('plant-humi').textContent = (last["濕度"] || "0") + " %";
+                    // 3. 土壤濕度
+                    document.getElementById('plant-soil').textContent = (last["土壤濕度"] || "0") + " %";
+                    
+                    // 4. CO2 (修正：對應試算表的小寫 co2)
+                    // 使用 last["co2"] 確保能抓到 793 這個數值
+                    const co2Value = last["co2"] || last["CO2"] || "0";
+                    document.getElementById('plant-co2').textContent = co2Value + " ppm";
+
+                    document.getElementById('data-status').textContent = `● 已更新: ${last["時間"] || ""}`;
+                    document.getElementById('data-status').style.color = "#22c55e";
+                }
+            } catch (err) {
+                console.error("抓取失敗:", err);
+                document.getElementById('data-status').textContent = "● 連線失敗";
+                document.getElementById('data-status').style.color = "#ef4444";
             }
         }
-    } catch (e) { 
-        console.error("讀取失敗:", e); 
-    }
-}
-</script>
-        // 啟動時先跑一次
-        updateDashboard();
 
-        // 每 30 秒自動更新一次
-        setInterval(updateDashboard, 30000);
+        // 立即執行並設定排程
+        updateData();
+        setInterval(updateData, 30000);
     </script>
 </body>
 </html>
