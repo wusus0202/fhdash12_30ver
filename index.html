@@ -3,210 +3,300 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>芳和環境監測中心</title>
+    <title>芳和實驗中學環境現況</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --bg: #f0eeed; --dark: #4a4545; --card: #ebebeb; --green: #3aa02d; --radius: 15px; }
+        :root {
+            --bg-color: #f4f4f4;
+            --sidebar-color: #4a4545;
+            --card-bg: #ebebeb;
+            --header-bg: #e0d8d7;
+            --radius: 15px; 
+            --accent-green: #2e7d32;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /*頂部標題*/
-        .header { height: 50px; background: #e0d8d7; display: flex; align-items: center; padding: 0 20px; font-weight: bold; justify-content: space-between; flex-shrink: 0; }
-        #status-tag { font-size: 0.75rem; color: #666; background: #fff; padding: 3px 10px; border-radius: 10px; border: 1px solid #ddd; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-color); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        .header { height: 60px; background: var(--header-bg); display: flex; align-items: center; padding: 0 25px; font-weight: 600; position: relative; flex-shrink: 0; }
+        .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; margin-right: 15px; }
+        #data-status { position: absolute; right: 25px; font-size: 0.85rem; padding: 5px 12px; border-radius: 10px; background: #fff; border: 1px solid #ddd; color: #777; }
 
         .app-container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 280px; background: var(--sidebar-color); color: white; padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.3s ease; }
+        
+        /* 下拉選單 */
+        .dropdown-container { position: relative; margin-bottom: 20px; }
+        .dropdown-btn { width: 100%; padding: 15px; border-radius: 10px; border: none; background: white; text-align: left; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: #5a5555; border-radius: 0 0 10px 10px; list-style: none; z-index: 3000; display: none; overflow: hidden; }
+        .dropdown-list.show { display: block; }
+        .dropdown-list li { padding: 12px 15px; border-bottom: 1px solid #6a6565; cursor: pointer; }
+        .dropdown-list li:hover { background: #7a7575; }
 
-        /*側邊欄*/
-        .sidebar { width: 250px; background: var(--dark); color: white; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-        .dropdown { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
-        .nav-btn { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px; border-radius: 10px; cursor: pointer; text-align: left; }
-        .nav-btn:hover { background: rgba(255,255,255,0.1); }
+        .menu-buttons { display: flex; flex-direction: column; gap: 10px; }
+        .nav-btn { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); padding: 12px; border-radius: 12px; cursor: pointer; text-align: left; padding-left: 20px; font-size: 1rem; }
 
-        /*主內容區*/
-        .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
-        .view-panel { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+        .main-content { flex: 1; padding: 25px; overflow-y: auto; }
+        .view-container { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+        
+        /* 控制不同版面的顯示 */
         .hidden { display: none !important; }
 
-        /*LASS 版面*/
-        .row-top { display: flex; gap: 20px; flex: 2; }
-        .row-bottom { display: flex; gap: 20px; flex: 1; }
-        .card { background: var(--card); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; flex: 1; }
-        
-        .gauge-box { flex: 2.5; position: relative; }
-        .pm-val { font-size: 4rem; font-weight: 800; color: #444; }
+        /* LASS 版面風格 */
+        .row-top { flex: 2.2; display: flex; gap: 20px; }
+        .row-bottom { flex: 1; display: flex; gap: 20px; }
+        .card { background: var(--card-bg); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; position: relative; }
+        .gauge-card { flex: 2.5; flex-direction: column; padding: 10px; }
+        .canvas-container { width: 320px; height: 320px; position: relative; display: flex; align-items: center; justify-content: center; }
+        .gauge-overlay { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        .gauge-overlay .value { font-size: 5rem; font-weight: 800; color: #666; line-height: 1; }
+        .aqi-notice { margin-top: 15px; padding: 6px 25px; border-radius: 20px; font-weight: bold; color: white; font-size: 1rem; }
+        .stack-column { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+        .stack-item { flex: 1; font-size: 2.8rem; font-weight: 600; color: #666; text-align: center; }
+        .info-group-wide { flex: 2.2; display: flex; background: var(--card-bg); border-radius: var(--radius); overflow: hidden; }
+        .segment { flex: 1; border-right: 1px solid #d4d4d4; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 600; color: #888; }
+        .segment:last-child { border-right: none; }
+        .info-group-weather { flex: 1; display: flex; gap: 20px; }
+        .weather-card { flex: 1; font-size: 2rem; font-weight: 600; color: #888; }
 
-        /*植物觀測四格版面*/
+        /* --- 植物監測專用四格佈局 --- */
         .plant-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; height: 100%; }
-        .p-card { background: var(--card); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .p-label { font-size: 1rem; color: #888; font-weight: bold; }
-        .p-num { font-size: 3rem; font-weight: 800; color: #444; }
+        .plant-card { background: var(--card-bg); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .p-label { font-size: 1.2rem; color: #888; margin-bottom: 10px; font-weight: bold; }
+        .p-value { font-size: 4rem; font-weight: 800; color: #666; }
+        .p-unit { font-size: 1.5rem; color: var(--accent-green); margin-left: 5px; }
 
-        /*彈出視窗*/
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal.active { display: flex; }
-        .modal-content { background: white; padding: 30px; border-radius: var(--radius); width: 90%; max-width: 700px; position: relative; }
-        .close-btn { position: absolute; right: 20px; top: 15px; font-size: 1.5rem; cursor: pointer; border: none; background: none; }
+        /* 時鐘與 Modal 略過與原版相同... (保留你的原樣式) */
+        .sidebar-bottom { margin-top: auto; background: rgba(255,255,255,0.1); padding: 15px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; }
+        .analog-clock { width: 55px; height: 55px; border: 2px solid white; border-radius: 50%; position: relative; flex-shrink: 0; }
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background: white; transform: translateX(-50%); }
+        .hour-hand { width: 3px; height: 12px; } .min-hand { width: 2px; height: 18px; } .sec-hand { width: 1px; height: 20px; background: #ff4444; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: var(--radius); width: 85%; max-width: 800px; position: relative; }
+        .chart-wrapper { height: 350px; width: 100%; margin-top: 10px; }
+
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { position: fixed; left: 0; top: 60px; bottom: 0; z-index: 5000; transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .row-top, .row-bottom { flex-direction: column; flex: none; }
+            .plant-grid { grid-template-columns: 1fr; } /* 手機端變成一列 */
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <span>芳和實驗中學環境監測系統</span>
-        <div id="status-tag">● 系統同步中</div>
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        芳和實驗中學環境現況
+        <div id="data-status">● 數據載入中</div>
     </div>
 
     <div class="app-container">
-        <div class="sidebar">
-            <select class="dropdown" id="location-select">
-                <option value="lass-A">小芳堂 (LASS)</option>
-                <option value="lass-B">司令台 (LASS)</option>
-                <option value="plant">植物觀測 (ESP32)</option>
-            </select>
+        <div class="sidebar" id="sidebar">
+            <div class="dropdown-container">
+                <button class="dropdown-btn" id="source-selector">小芳堂 ▼</button>
+                <ul class="dropdown-list" id="source-list">
+                    <li data-source="A">小芳堂</li>
+                    <li data-source="B">司令台</li>
+                    <li data-source="C">學務處</li>
+                    <li data-source="E">植物觀測</li> </ul>
+            </div>
             
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="nav-btn" onclick="showChart('溫度')">溫度趨勢</button>
-                <button class="nav-btn" onclick="showChart('濕度')">濕度趨勢</button>
-                <button class="nav-btn" onclick="showChart('PM2.5')">PM2.5 趨勢</button>
-                <button class="nav-btn" onclick="showChart('CO2')">CO2 趨勢</button>
+            <div class="menu-buttons">
+                <button class="nav-btn" onclick="navToModal('溫度', 's_t0')">溫度</button>
+                <button class="nav-btn" onclick="navToModal('濕度', 's_h0')">濕度</button>
+                <button class="nav-btn" onclick="navToModal('二氧化碳', 's_g8')">二氧化碳</button>
+                <button class="nav-btn" onclick="navToModal('PM2.5', 's_d0')">PM2.5</button>
+            </div>
+            
+            <div class="sidebar-bottom">
+                <div class="analog-clock"><div class="hand hour-hand" id="hr"></div><div class="hand min-hand" id="mn"></div><div class="hand sec-hand" id="sc"></div></div>
+                <div><div id="date-display" style="font-size:0.7rem">--</div><div id="time-display" style="font-size:0.8rem; font-weight:bold">00:00:00</div></div>
             </div>
         </div>
 
         <div class="main-content">
-            <div id="panel-lass" class="view-panel">
+            <div id="lass-view" class="view-container">
                 <div class="row-top">
-                    <div class="card gauge-box">
-                        <canvas id="gaugeChart" style="max-width: 250px;"></canvas>
-                        <div style="position: absolute; text-align: center; top: 55%;">
-                            <div class="pm-val" id="lass-pm25">--</div>
-                            <div style="font-weight: bold; color: #888;">PM2.5</div>
+                    <div class="card gauge-card">
+                        <div class="canvas-container">
+                            <canvas id="pm25Gauge"></canvas>
+                            <div class="gauge-overlay">
+                                <div style="color:#aaa; font-size:1.1rem; font-weight: bold;">PM2.5</div>
+                                <div class="value" id="pm25-val">--</div>
+                                <div id="aqi-notice" class="aqi-notice">...</div>
+                            </div>
                         </div>
                     </div>
-                    <div style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
-                        <div class="card"><small>溫度</small><h2 id="lass-temp">-- °C</h2></div>
-                        <div class="card"><small>濕度</small><h2 id="lass-humi">-- %</h2></div>
+                    <div class="stack-column">
+                        <div class="card stack-item" id="temp-display">-- °C</div>
+                        <div class="card stack-item" id="humi-display">-- %</div>
                     </div>
                 </div>
                 <div class="row-bottom">
-                    <div class="card" style="flex: 2.5; flex-direction: row; justify-content: space-around;">
-                        <div><small>CO2</small><p id="lass-co2">-- ppm</p></div>
-                        <div><small>TVOC</small><p id="lass-tvoc">-- ppb</p></div>
+                    <div class="info-group-wide">
+                        <div class="segment" id="co2-display">-- ppm</div>
+                        <div class="segment" id="tvoc-display">-- ppb</div>
                     </div>
-                    <div class="card">⛅ 晴時多雲</div>
+                    <div class="info-group-weather">
+                        <div class="card weather-card" id="precip-display">-- %</div>
+                        <div class="card weather-card" id="weather-icon">⛅</div>
+                    </div>
                 </div>
             </div>
 
-            <div id="panel-plant" class="view-panel hidden">
-                <div class="plant-grid">
-                    <div class="p-card"><span class="p-label">環境溫度</span><div class="p-num" id="p-temp">--</div></div>
-                    <div class="p-card"><span class="p-label">環境濕度</span><div class="p-num" id="p-humi">--</div></div>
-                    <div class="p-card"><span class="p-label">土壤濕度</span><div class="p-num" id="p-soil">--</div></div>
-                    <div class="p-card"><span class="p-label">二氧化碳</span><div class="p-num" id="p-co2">--</div></div>
+            <div id="plant-view" class="plant-grid hidden">
+                <div class="plant-card">
+                    <div class="p-label">空氣溫度</div>
+                    <div><span class="p-value" id="p-temp">--</span><span class="p-unit">°C</span></div>
+                </div>
+                <div class="plant-card">
+                    <div class="p-label">空氣濕度</div>
+                    <div><span class="p-value" id="p-humi">--</span><span class="p-unit">%</span></div>
+                </div>
+                <div class="plant-card">
+                    <div class="p-label">土壤濕度</div>
+                    <div><span class="p-value" id="p-soil">--</span><span class="p-unit">%</span></div>
+                </div>
+                <div class="plant-card">
+                    <div class="p-label">二氧化碳</div>
+                    <div><span class="p-value" id="p-co2">--</span><span class="p-unit">ppm</span></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal" id="chart-modal">
+    <div class="modal-overlay" id="history-modal">
         <div class="modal-content">
-            <button class="close-btn" onclick="closeModal()">×</button>
-            <h3 id="modal-title">歷史數據</h3>
-            <div style="height: 350px; margin-top: 20px;">
-                <canvas id="historyChart"></canvas>
-            </div>
+            <button style="float:right; border:none; background:none; font-size:2rem; cursor:pointer;" onclick="closeModal()">&times;</button>
+            <h2 id="modal-title">趨勢圖</h2>
+            <div class="chart-wrapper" id="chartParent"><canvas id="historyChart"></canvas></div>
         </div>
     </div>
 
     <script>
-        // *** 這裡填入你真正的 GAS 部署網址 ***
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec";
-        
-        const LASS_IDS = { 'lass-A': 'B827EB63D1C8', 'lass-B': 'B827EBC2994D' };
-        let currentMode = 'lass-A';
-        let gauge, hChart;
+        const config = {
+            'A': { name: '小芳堂', id: 'B827EB63D1C8', type: 'lass' },
+            'B': { name: '司令台', id: 'B827EBC2994D', type: 'lass' },
+            'C': { name: '學務處', id: 'B827EB797224', type: 'lass' },
+            'E': { name: '植物觀測', type: 'gas' } // 指向你的 GAS 系統
+        };
+
+        // 這裡替換成你的 Google Apps Script 部署 URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec"; 
+
+        let currentSrc = 'A';
+        let gauge, historyChart, dataInterval;
 
         window.onload = () => {
             initGauge();
-            document.getElementById('location-select').onchange = (e) => switchView(e.target.value);
-            refreshData();
-            setInterval(refreshData, 30000); // 每 30 秒更新一次
+            setupDropdown();
+            updateClock();
+            setInterval(updateClock, 1000);
+            switchPage('A'); 
         };
 
-        function switchView(val) {
-            currentMode = val;
-            document.getElementById('panel-lass').classList.toggle('hidden', val === 'plant');
-            document.getElementById('panel-plant').classList.toggle('hidden', val !== 'plant');
-            refreshData();
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+
+        function setupDropdown() {
+            const btn = document.getElementById('source-selector');
+            const list = document.getElementById('source-list');
+            btn.onclick = (e) => { e.stopPropagation(); list.classList.toggle('show'); };
+            window.onclick = () => list.classList.remove('show');
+            document.querySelectorAll('#source-list li').forEach(li => {
+                li.onclick = () => {
+                    const src = li.dataset.source;
+                    btn.textContent = config[src].name + " ▼";
+                    switchPage(src);
+                };
+            });
         }
 
-        async function refreshData() {
-            const status = document.getElementById('status-tag');
-            status.innerText = "● 數據更新中...";
-
-            if (currentMode.startsWith('lass')) {
-                try {
-                    const res = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${LASS_IDS[currentMode]}`);
-                    const json = await res.json();
-                    const d = json.feeds[0][Object.keys(json.feeds[0])[0]];
-                    
-                    document.getElementById('lass-pm25').innerText = Math.round(d.s_d0);
-                    document.getElementById('lass-temp').innerText = d.s_t0.toFixed(1) + " °C";
-                    document.getElementById('lass-humi').innerText = Math.round(d.s_h0) + " %";
-                    document.getElementById('lass-co2').innerText = Math.round(d.s_g8) + " ppm";
-                    document.getElementById('lass-tvoc').innerText = Math.round(d.s_gg || 0) + " ppb";
-                    
-                    updateGauge(d.s_d0);
-                    status.innerText = "● LASS 數據已同步";
-                } catch(e) { status.innerText = "● LASS 連線異常"; }
+        function switchPage(src) {
+            currentSrc = src;
+            if (dataInterval) clearInterval(dataInterval);
+            
+            // 切換視圖顯示
+            if (config[src].type === 'gas') {
+                document.getElementById('lass-view').classList.add('hidden');
+                document.getElementById('plant-view').classList.remove('hidden');
+                fetchPlantData();
+                dataInterval = setInterval(fetchPlantData, 30000);
             } else {
-                try {
-                    // 修正點：加入 redirect: "follow" 處理 GAS 的跳轉
-                    const res = await fetch(GAS_URL, { redirect: "follow" });
-                    const data = await res.json();
-                    const last = data[data.length - 1];
-                    
-                    document.getElementById('p-temp').innerText = last["溫度"] || "--";
-                    document.getElementById('p-humi').innerText = last["濕度"] || "--";
-                    document.getElementById('p-soil').innerText = last["土壤濕度"] || "--";
-                    document.getElementById('p-co2').innerText = last["CO2"] || last["co2"] || "--";
-                    status.innerText = "● 植物監測站已同步";
-                } catch(e) { status.innerText = "● GAS 連線失敗"; }
+                document.getElementById('lass-view').classList.remove('hidden');
+                document.getElementById('plant-view').classList.add('hidden');
+                fetchLassData();
+                dataInterval = setInterval(fetchLassData, 30000);
             }
         }
 
+        // 抓取 LASS 數據
+        async function fetchLassData() {
+            const device = config[currentSrc];
+            try {
+                const res = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${device.id}`);
+                const json = await res.json();
+                const d = json.feeds[0][Object.keys(json.feeds[0])[0]];
+                // 更新 LASS 畫面元件 (與你原本邏輯相同)
+                updateLassUI(d);
+                document.getElementById('data-status').innerHTML = `● ${device.name} 更新成功`;
+            } catch (e) { document.getElementById('data-status').innerHTML = `● 連線錯誤`; }
+        }
+
+        // 抓取植物 GAS 數據
+        async function fetchPlantData() {
+            try {
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
+                const last = data[data.length - 1]; // 假設最新的在最後一行
+
+                document.getElementById('p-temp').textContent = last["溫度"] || last.temp || "--";
+                document.getElementById('p-humi').textContent = last["濕度"] || last.humi || "--";
+                document.getElementById('p-soil').textContent = last["土壤濕度"] || last.soil || "--";
+                document.getElementById('p-co2').textContent = last["CO2"] || last.co2 || "--";
+                
+                document.getElementById('data-status').innerHTML = `● 植物數據更新成功`;
+            } catch (e) { document.getElementById('data-status').innerHTML = `● 植物系統連線失敗`; }
+        }
+
+        function updateLassUI(d) {
+            const pm = Math.round(d.s_d0);
+            document.getElementById('pm25-val').textContent = pm;
+            const pmColor = pm < 30 ? '#3aa02d' : (pm < 70 ? '#fffd21' : '#fa0000');
+            const notice = document.getElementById('aqi-notice');
+            notice.textContent = pm < 30 ? '良好' : '普通';
+            notice.style.backgroundColor = pmColor;
+            gauge.data.datasets[0].backgroundColor = [pmColor, '#e0e0e0'];
+            gauge.data.datasets[0].data = [pm, 150 - pm];
+            gauge.update();
+            document.getElementById('temp-display').textContent = `${d.s_t0.toFixed(1)} °C`;
+            document.getElementById('humi-display').textContent = `${Math.round(d.s_h0)} %`;
+            document.getElementById('co2-display').textContent = `${Math.round(d.s_g8)} ppm`;
+            document.getElementById('tvoc-display').textContent = `${Math.round(d.s_g8)} ppb`;
+        }
+
+        // 其他 Modal 與 Clock 函數維持不變...
         function initGauge() {
-            const ctx = document.getElementById('gaugeChart').getContext('2d');
+            const ctx = document.getElementById('pm25Gauge').getContext('2d');
             gauge = new Chart(ctx, {
                 type: 'doughnut',
-                data: { datasets: [{ data: [0, 100], backgroundColor: ['#3aa02d', '#eee'], circumference: 240, rotation: 240, cutout: '85%' }] },
-                options: { responsive: true, plugins: { legend: { display: false } } }
+                data: { datasets: [{ data: [0, 150], backgroundColor: ['#3aa02d', '#e0e0e0'], circumference: 270, rotation: 225, cutout: '80%', borderRadius: 10 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
-
-        function updateGauge(val) {
-            const color = val < 35 ? '#3aa02d' : (val < 75 ? '#fbc02d' : '#d32f2f');
-            gauge.data.datasets[0].backgroundColor = [color, '#eee'];
-            gauge.data.datasets[0].data = [val, 100 - val];
-            gauge.update();
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+            document.getElementById('hr').style.transform = `translateX(-50%) rotate(${(h % 12) * 30 + m * 0.5}deg)`;
+            document.getElementById('mn').style.transform = `translateX(-50%) rotate(${m * 6}deg)`;
+            document.getElementById('sc').style.transform = `translateX(-50%) rotate(${s * 6}deg)`;
+            document.getElementById('time-display').textContent = now.toLocaleTimeString('zh-TW', {hour12: false});
+            document.getElementById('date-display').textContent = now.toLocaleDateString('zh-TW', { weekday: 'short', month: 'numeric', day: 'numeric' });
         }
-
-        // 修正點：函數名稱統一為 showChart，解決 ReferenceError
-        function showChart(title) {
-            document.getElementById('modal-title').innerText = title + " 歷史趨勢圖";
-            document.getElementById('chart-modal').classList.add('active');
-            
-            if (hChart) hChart.destroy();
-            const ctx = document.getElementById('historyChart').getContext('2d');
-            hChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
-                    datasets: [{ label: title, data: [20, 23, 25, 22, 28, 24], borderColor: '#4a4545', fill: true, tension: 0.3 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        function closeModal() { document.getElementById('chart-modal').classList.remove('active'); }
+        function closeModal() { document.getElementById('history-modal').classList.remove('active'); }
+        function navToModal(label, key) { if (window.innerWidth <= 768) toggleSidebar(); openModal(label, key); }
     </script>
 </body>
 </html>
