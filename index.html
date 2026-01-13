@@ -255,69 +255,86 @@
             });
         }
 
-       async function updateChart(label, field) {
+async function updateChart(label, field) {
     try {
         const res = await fetch(`https://pm25.lass-net.org/data/history.php?device_id=${config[currentKey].id}`);
         const json = await res.json();
         
         if (!json || !json.feeds || json.feeds.length === 0) return;
 
-        // 穿透第一層：feeds[0] -> { "B827...": [...] }
         const deviceData = json.feeds[0];
         const deviceKey = Object.keys(deviceData)[0];
         const rawHistory = deviceData[deviceKey];
 
         const now = new Date().getTime();
-        const cutoff = now - (12 * 60 * 60 * 1000); // 12 小時
-        let points = [];
-
+        const cutoff = now - (24 * 60 * 60 * 1000); // 擴大到 24 小時
+        const interval = 15 * 60 * 1000; // 15 分鐘毫秒數
+        
+        // 1. 提取並初步過濾數據
+        let allPoints = [];
         rawHistory.forEach(f => {
-            // 穿透第二層：每個元素本身又是一個以時間戳記為 Key 的物件
             const tsKey = Object.keys(f)[0];
             const d = f[tsKey];
-
             if (d && d[field] !== undefined) {
-                // 優先使用 d.timestamp，若無則用外層的 tsKey
-                const timeStr = d.timestamp || tsKey;
-                const ts = new Date(timeStr).getTime();
-                
-                if (!isNaN(ts)) {
-                    points.push({ x: ts, y: parseFloat(d[field]) });
+                const ts = new Date(d.timestamp || tsKey).getTime();
+                if (!isNaN(ts) && ts >= cutoff) {
+                    allPoints.push({ x: ts, y: parseFloat(d[field]) });
                 }
             }
         });
 
-        // 排序：確保時間軸由左至右
-        points.sort((a, b) => a.x - b.x);
-
-        // 過濾最近 12 小時
-        let filteredPoints = points.filter(p => p.x >= cutoff);
-
-        // 【保險機制】如果 12 小時內無數據，則抓取最後存檔的 20 筆
-        let displayPoints = filteredPoints.length > 0 ? filteredPoints : points.slice(-20);
-        let timeSuffix = filteredPoints.length > 0 ? "(近 12h)" : "(最近存檔)";
-
-        if (displayPoints.length > 0) {
-            mainChart.data.labels = displayPoints.map(p => {
-                const t = new Date(p.x);
-                return `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
-            });
-            mainChart.data.datasets[0].label = `${config[currentKey].name} - ${label} ${timeSuffix}`;
-            mainChart.data.datasets[0].data = displayPoints.map(p => p.y);
-            
-            // 根據數據類型調整線條顏色
-            const themeColor = getLevelColor(field === 's_d0' ? 'pm25' : field === 's_t0' ? 'temp' : 'co2', displayPoints[displayPoints.length-1].y);
-            mainChart.data.datasets[0].borderColor = themeColor;
-            mainChart.data.datasets[0].backgroundColor = themeColor + '1A'; // 10% 透明度
-            
-            mainChart.update();
+        if (allPoints.length === 0) {
+            document.getElementById('status-text').innerText = "近 24 小時無歷史數據";
+            return;
         }
+
+        // 2. 數據降維：每 15 分鐘一組取平均值
+        // 我們建立一個 Map，Key 是 15 分鐘取整後的時間戳
+        const grouped = new Map();
+
+        allPoints.forEach(p => {
+            // 將時間戳對齊到最近的 15 分鐘（例如 10:14 -> 10:00, 10:16 -> 10:15）
+            const slot = Math.floor(p.x / interval) * interval;
+            if (!grouped.has(slot)) {
+                grouped.set(slot, { sum: 0, count: 0 });
+            }
+            const data = grouped.get(slot);
+            data.sum += p.y;
+            data.count += 1;
+        });
+
+        // 3. 轉換回 Chart.js 格式並排序
+        let finalPoints = [];
+        grouped.forEach((val, key) => {
+            finalPoints.push({
+                x: key,
+                y: parseFloat((val.sum / val.count).toFixed(2)) // 取平均值
+            });
+        });
+
+        finalPoints.sort((a, b) => a.x - b.x);
+
+        // 4. 更新圖表
+        mainChart.data.labels = finalPoints.map(p => {
+            const t = new Date(p.x);
+            // 顯示格式：01/13 14:15
+            return `${t.getMonth()+1}/${t.getDate()} ${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+        });
+
+        mainChart.data.datasets[0].label = `${config[currentKey].name} - ${label} (24h 均值)`;
+        mainChart.data.datasets[0].data = finalPoints.map(p => p.y);
+        
+        // 視覺優化：點不要太大
+        mainChart.data.datasets[0].pointRadius = 2;
+        mainChart.data.datasets[0].borderWidth = 2;
+
+        mainChart.update();
+        document.getElementById('status-text').innerText = `已顯示 ${finalPoints.length} 個時段的數據`;
+
     } catch (e) {
-        console.error("LASS 歷史數據解析失敗:", e);
-        document.getElementById('status-text').innerText = "圖表載入失敗";
+        console.error("降維解析失敗:", e);
     }
 }
-
         function initGauge() {
             gauge = new Chart(document.getElementById('pm25Gauge').getContext('2d'), { type: 'doughnut', data: { datasets: [{ data: [0, 100], circumference: 270, rotation: 225, cutout: '85%', borderRadius: 10 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         }
