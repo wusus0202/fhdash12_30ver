@@ -255,24 +255,68 @@
             });
         }
 
-        async function updateChart(label, field) {
-            try {
-                const res = await fetch(`https://pm25.lass-net.org/data/history.php?device_id=${config[currentKey].id}`);
-                const json = await res.json();
-                const history = json.feeds[0][Object.keys(json.feeds[0])[0]];
-                const cutoff = new Date().getTime() - (12 * 60 * 60 * 1000);
-                let points = [];
-                history.forEach(f => {
-                    const d = f[Object.keys(f)[0]]; const ts = new Date(d.timestamp).getTime();
-                    if (ts >= cutoff && d[field] !== undefined) points.push({ x: ts, y: parseFloat(d[field]) });
-                });
-                points.sort((a,b) => a.x - b.x);
-                mainChart.data.labels = points.map(p => { const t = new Date(p.x); return `${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`; });
-                mainChart.data.datasets[0].label = `${config[currentKey].name} - ${label}`;
-                mainChart.data.datasets[0].data = points.map(p => p.y);
-                mainChart.update();
-            } catch (e) { console.error(e); }
+       async function updateChart(label, field) {
+    try {
+        const res = await fetch(`https://pm25.lass-net.org/data/history.php?device_id=${config[currentKey].id}`);
+        const json = await res.json();
+        
+        if (!json || !json.feeds || json.feeds.length === 0) return;
+
+        // 穿透第一層：feeds[0] -> { "B827...": [...] }
+        const deviceData = json.feeds[0];
+        const deviceKey = Object.keys(deviceData)[0];
+        const rawHistory = deviceData[deviceKey];
+
+        const now = new Date().getTime();
+        const cutoff = now - (12 * 60 * 60 * 1000); // 12 小時
+        let points = [];
+
+        rawHistory.forEach(f => {
+            // 穿透第二層：每個元素本身又是一個以時間戳記為 Key 的物件
+            const tsKey = Object.keys(f)[0];
+            const d = f[tsKey];
+
+            if (d && d[field] !== undefined) {
+                // 優先使用 d.timestamp，若無則用外層的 tsKey
+                const timeStr = d.timestamp || tsKey;
+                const ts = new Date(timeStr).getTime();
+                
+                if (!isNaN(ts)) {
+                    points.push({ x: ts, y: parseFloat(d[field]) });
+                }
+            }
+        });
+
+        // 排序：確保時間軸由左至右
+        points.sort((a, b) => a.x - b.x);
+
+        // 過濾最近 12 小時
+        let filteredPoints = points.filter(p => p.x >= cutoff);
+
+        // 【保險機制】如果 12 小時內無數據，則抓取最後存檔的 20 筆
+        let displayPoints = filteredPoints.length > 0 ? filteredPoints : points.slice(-20);
+        let timeSuffix = filteredPoints.length > 0 ? "(近 12h)" : "(最近存檔)";
+
+        if (displayPoints.length > 0) {
+            mainChart.data.labels = displayPoints.map(p => {
+                const t = new Date(p.x);
+                return `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+            });
+            mainChart.data.datasets[0].label = `${config[currentKey].name} - ${label} ${timeSuffix}`;
+            mainChart.data.datasets[0].data = displayPoints.map(p => p.y);
+            
+            // 根據數據類型調整線條顏色
+            const themeColor = getLevelColor(field === 's_d0' ? 'pm25' : field === 's_t0' ? 'temp' : 'co2', displayPoints[displayPoints.length-1].y);
+            mainChart.data.datasets[0].borderColor = themeColor;
+            mainChart.data.datasets[0].backgroundColor = themeColor + '1A'; // 10% 透明度
+            
+            mainChart.update();
         }
+    } catch (e) {
+        console.error("LASS 歷史數據解析失敗:", e);
+        document.getElementById('status-text').innerText = "圖表載入失敗";
+    }
+}
 
         function initGauge() {
             gauge = new Chart(document.getElementById('pm25Gauge').getContext('2d'), { type: 'doughnut', data: { datasets: [{ data: [0, 100], circumference: 270, rotation: 225, cutout: '85%', borderRadius: 10 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
