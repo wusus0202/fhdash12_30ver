@@ -279,12 +279,48 @@
     }
 
     // --- 關鍵修正：定義 openModal 函數 ---
+   // --- 修正：清空虛擬數據，等待真實 API 串接 ---
     function openModal(label, key) {
         document.getElementById('modal-title').innerText = `${label} 趨勢圖`;
         document.getElementById('history-modal').classList.add('active');
         
         const ctx = document.getElementById('historyChart').getContext('2d');
         if (historyChart) historyChart.destroy();
+        
+        // 建立一個空的圖表，不帶入任何虛擬數值 [20, 22, 25...]
+        historyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // 清空標籤
+                datasets: [{
+                    label: label,
+                    data: [], // 清空數據，現在點開會是空白的
+                    borderColor: '#4a4545',
+                    backgroundColor: 'rgba(74, 69, 69, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    // 當沒有數據時，在畫面上顯示提示文字
+                    subtitle: {
+                        display: true,
+                        text: '歷史數據串接中...',
+                        color: '#999',
+                        font: { size: 16 }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { display: true }
+                }
+            }
+        });
+    }
         
         // 建立圖表 (目前先顯示模擬趨勢，結構已就緒)
         historyChart = new Chart(ctx, {
