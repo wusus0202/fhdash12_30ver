@@ -10,33 +10,34 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx
 let currentSrc = 'A';
 let gauge, historyChart, dataInterval;
 
-// --- Helper: Logic for Level-Based Colors ---
+// --- 1. Color Logic Helper ---
+// This function determines the hex color based on the value and type of data
 function getColorByLevel(type, value) {
     if (value === null || value === undefined || isNaN(value)) return '#666'; 
 
     switch (type) {
-        case 'temp': // Temperature logic
+        case 'temp': // Temperature
             if (value < 18) return '#007bff'; // Cold (Blue)
-            if (value <= 28) return '#3aa02d'; // Comfortable (Green)
+            if (value <= 28) return '#3aa02d'; // Good (Green)
             return '#fa0000'; // Hot (Red)
 
-        case 'humi': // Humidity logic
+        case 'humi': // Humidity
             if (value < 40) return '#ff9800'; // Dry (Orange)
-            if (value <= 70) return '#3aa02d'; // Ideal (Green)
-            return '#007bff'; // Too Humid (Blue)
+            if (value <= 70) return '#3aa02d'; // Good (Green)
+            return '#007bff'; // Humid (Blue)
 
-        case 'co2': // CO2 logic
-            if (value < 800) return '#3aa02d';  // Fresh (Green)
-            if (value < 1000) return '#fbc02d'; // Warning (Yellow)
-            return '#fa0000'; // Poor (Red)
+        case 'co2': // Carbon Dioxide
+            if (value < 800) return '#3aa02d';  // Fresh
+            if (value < 1000) return '#fbc02d'; // Warning
+            return '#fa0000'; // Poor
 
-        case 'tvoc': // TVOC logic
-            if (value < 300) return '#3aa02d'; // Safe
-            return '#fa0000'; // High
+        case 'tvoc': // Organic Compounds
+            if (value < 300) return '#3aa02d';
+            return '#fa0000';
 
         case 'soil': // Soil Moisture
-            if (value < 20) return '#fa0000'; // Needs Water
-            return '#3aa02d'; // Healthy
+            if (value < 20) return '#fa0000'; // Dry
+            return '#3aa02d'; // Wet
             
         default:
             return '#666';
@@ -84,6 +85,7 @@ function switchPage(src) {
     }
 }
 
+// --- 2. LASS Data Handling (Outdoor) ---
 async function fetchLassData() {
     const device = config[currentSrc];
     try {
@@ -95,50 +97,14 @@ async function fetchLassData() {
     } catch (e) { document.getElementById('data-status').innerHTML = `● LASS 連線錯誤`; }
 }
 
-async function fetchPlantData() {
-    try {
-        const res = await fetch(GAS_URL, { redirect: "follow" });
-        const data = await res.json();
-        const last = data[data.length - 1]; 
-
-        // Extract values
-        const t = last["溫度"] || last.temp;
-        const h = last["濕度"] || last.humi;
-        const s = last["土壤濕度"] || last.soil;
-        const c = last["CO2"] || last.co2;
-
-        // Update Plant UI with colors
-        const pTemp = document.getElementById('p-temp');
-        pTemp.textContent = t || "--";
-        pTemp.style.color = getColorByLevel('temp', t);
-
-        const pHumi = document.getElementById('p-humi');
-        pHumi.textContent = h || "--";
-        pHumi.style.color = getColorByLevel('humi', h);
-
-        const pSoil = document.getElementById('p-soil');
-        pSoil.textContent = s || "--";
-        pSoil.style.color = getColorByLevel('soil', s);
-
-        const pCo2 = document.getElementById('p-co2');
-        pCo2.textContent = c || "--";
-        pCo2.style.color = getColorByLevel('co2', c);
-        
-        document.getElementById('data-status').innerHTML = `● 植物數據更新成功`;
-    } catch (e) { 
-        console.error(e);
-        document.getElementById('data-status').innerHTML = `● 植物系統連線失敗`; 
-    }
-}
-
 function updateLassUI(d) {
     const pm = Math.round(d.s_d0);
-    const pmColor = pm < 30 ? '#3aa02d' : (pm < 70 ? '#fffd21' : '#fa0000');
+    const pmColor = pm < 30 ? '#3aa02d' : (pm < 70 ? '#fbc02d' : '#fa0000');
     
-    // PM2.5 Update
+    // PM2.5 Text & Gauge
     const pmValEl = document.getElementById('pm25-val');
     pmValEl.textContent = pm;
-    pmValEl.style.color = pmColor;
+    pmValEl.style.setProperty('color', pmColor, 'important');
 
     const notice = document.getElementById('aqi-notice');
     notice.textContent = pm < 30 ? '良好' : '普通';
@@ -148,27 +114,62 @@ function updateLassUI(d) {
     gauge.data.datasets[0].data = [pm, 150 - pm];
     gauge.update();
 
-    // Temperature Update
-    const tempEl = document.getElementById('temp-display');
-    tempEl.textContent = `${d.s_t0.toFixed(1)} °C`;
-    tempEl.style.color = getColorByLevel('temp', d.s_t0);
+    // Temperature
+    const tEl = document.getElementById('temp-display');
+    tEl.textContent = `${d.s_t0.toFixed(1)} °C`;
+    tEl.style.setProperty('color', getColorByLevel('temp', d.s_t0), 'important');
 
-    // Humidity Update
-    const humiEl = document.getElementById('humi-display');
-    humiEl.textContent = `${Math.round(d.s_h0)} %`;
-    humiEl.style.color = getColorByLevel('humi', d.s_h0);
+    // Humidity
+    const hEl = document.getElementById('humi-display');
+    hEl.textContent = `${Math.round(d.s_h0)} %`;
+    hEl.style.setProperty('color', getColorByLevel('humi', d.s_h0), 'important');
 
-    // CO2 Update
-    const co2El = document.getElementById('co2-display');
-    co2El.textContent = `${Math.round(d.s_g8)} ppm`;
-    co2El.style.color = getColorByLevel('co2', d.s_g8);
+    // CO2
+    const cEl = document.getElementById('co2-display');
+    cEl.textContent = `${Math.round(d.s_g8)} ppm`;
+    cEl.style.setProperty('color', getColorByLevel('co2', d.s_g8), 'important');
 
-    // TVOC Update
-    const tvocEl = document.getElementById('tvoc-display');
-    tvocEl.textContent = `${Math.round(d.s_gg || 0)} ppb`;
-    tvocEl.style.color = getColorByLevel('tvoc', d.s_gg);
+    // TVOC
+    const vEl = document.getElementById('tvoc-display');
+    vEl.textContent = `${Math.round(d.s_gg || 0)} ppb`;
+    vEl.style.setProperty('color', getColorByLevel('tvoc', d.s_gg), 'important');
 }
 
+// --- 3. Plant Data Handling (Indoor/GAS) ---
+async function fetchPlantData() {
+    try {
+        const res = await fetch(GAS_URL, { redirect: "follow" });
+        const data = await res.json();
+        const last = data[data.length - 1]; 
+
+        const t = parseFloat(last["溫度"] || last.temp);
+        const h = parseFloat(last["濕度"] || last.humi);
+        const s = parseFloat(last["土壤濕度"] || last.soil);
+        const c = parseFloat(last["CO2"] || last.co2);
+
+        // Update Plant UI Elements and Colors
+        updateElementWithColor('p-temp', t, 'temp');
+        updateElementWithColor('p-humi', h, 'humi');
+        updateElementWithColor('p-soil', s, 'soil');
+        updateElementWithColor('p-co2', c, 'co2');
+        
+        document.getElementById('data-status').innerHTML = `● 植物數據更新成功`;
+    } catch (e) { 
+        console.error(e);
+        document.getElementById('data-status').innerHTML = `● 植物系統連線失敗`; 
+    }
+}
+
+// Helper to update text and color at once
+function updateElementWithColor(id, val, type) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.textContent = isNaN(val) ? "--" : val;
+        el.style.setProperty('color', getColorByLevel(type, val), 'important');
+    }
+}
+
+// --- 4. Modal & Charting ---
 function openModal(label, key) {
     document.getElementById('modal-title').innerText = `${label} 趨勢圖`;
     document.getElementById('history-modal').classList.add('active');
@@ -200,6 +201,7 @@ function navToModal(label, key) {
 
 function closeModal() { document.getElementById('history-modal').classList.remove('active'); }
 
+// --- 5. Gauges & Clock ---
 function initGauge() {
     const ctx = document.getElementById('pm25Gauge').getContext('2d');
     gauge = new Chart(ctx, {
