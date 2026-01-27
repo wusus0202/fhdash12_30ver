@@ -166,11 +166,11 @@
                     </div>
                     <div id="side-cards" style="flex:1; display:flex; flex-direction:column; gap:20px;">
                         <div class="card" style="flex:1;">
-                            <span class="label-text" id="l1">即時溫度</span>
+                            <span class="label-text">即時溫度</span>
                             <div class="val-large" id="t-val">-- <span class="val-unit">°C</span></div>
                         </div>
                         <div class="card" style="flex:1;">
-                            <span class="label-text" id="l2">相對濕度</span>
+                            <span class="label-text">相對濕度</span>
                             <div class="val-large" id="h-val">-- <span class="val-unit">%</span></div>
                         </div>
                     </div>
@@ -178,7 +178,7 @@
                 <div style="display:flex; gap:20px; height:35%;">
                     <div class="card" style="flex:2; flex-direction:row; padding:0;">
                         <div style="flex:1; text-align:center; border-right:1px solid #eee;">
-                            <span class="label-text" id="l4">二氧化碳 (CO2)</span>
+                            <span class="label-text">二氧化碳 (CO2)</span>
                             <div id="c-val" style="font-size:2.5rem; font-weight:800;">--</div>
                         </div>
                         <div id="tvoc-container" style="flex:1; text-align:center;">
@@ -186,7 +186,7 @@
                             <div id="tv-val" style="font-size:2.5rem; font-weight:800;">--</div>
                         </div>
                         <div id="soil-container" class="hidden" style="flex:1; text-align:center;">
-                            <span class="label-text" id="l3">土壤濕度</span>
+                            <span class="label-text">土壤濕度</span>
                             <div id="soil-val" style="font-size:2.5rem; font-weight:800; color:var(--clr-blue);">--</div>
                         </div>
                     </div>
@@ -209,7 +209,6 @@
     </div>
 
     <script>
-        // ⚠️ 請填入你部署 GAS 的網址
         const gasUrl = "https://script.google.com/macros/s/AKfycbyVn9uHn8F48Tz7LhXp-R0O8S45Wp-3P8XU2I3v5I/exec"; 
 
         const config = { 
@@ -218,6 +217,7 @@
             'C': {id: 'B827EB797224', name: '學務處'},
             'P': {id: 'PLANT', name: '植物區'}
         };
+
         const standards = {
             's_d0': [{l:'優', v:'0-15', c:'#00b894'}, {l:'普', v:'16-35', c:'#fdcb6e'}, {l:'差', v:'36-54', c:'#e17055'}, {l:'危', v:'55+', c:'#d63031'}],
             's_t0': [{l:'冷', v:'<18', c:'#0984e3'}, {l:'舒', v:'18-28', c:'#00b894'}, {l:'熱', v:'28+', c:'#d63031'}],
@@ -235,31 +235,31 @@
         };
 
         function getLevelColor(type, val) {
-            if (type === 'pm25') return val <= 15 ? '#00b894' : val <= 35 ? '#fdcb6e' : '#d63031';
-            if (type === 'temp') return val < 18 ? '#0984e3' : val <= 28 ? '#00b894' : '#d63031';
-            if (type === 'humi') return (val < 30 || val > 70) ? '#e17055' : '#00b894';
-            if (type === 'co2') return val <= 1000 ? '#00b894' : val <= 2000 ? '#fdcb6e' : '#d63031';
-            if (type === 'tvoc') return val < 220 ? '#00b894' : val < 660 ? '#fdcb6e' : '#d63031';
+            let v = parseFloat(val);
+            if (type === 'pm25') return v <= 15 ? '#00b894' : v <= 35 ? '#fdcb6e' : '#d63031';
+            if (type === 'temp') return v < 18 ? '#0984e3' : v <= 28 ? '#00b894' : '#d63031';
+            if (type === 'humi') return (v < 30 || v > 70) ? '#e17055' : '#00b894';
+            if (type === 'co2') return v <= 1000 ? '#00b894' : v <= 2000 ? '#fdcb6e' : '#d63031';
+            if (type === 'tvoc') return v < 220 ? '#00b894' : v < 660 ? '#fdcb6e' : '#d63031';
             return '#2d3436';
         }
 
         async function fetchLoop() {
-            // LASS 數據
             for(let k in config) {
-                if(k === 'P') continue;
-                try {
-                    const r = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${config[k].id}`);
-                    const j = await r.json();
-                    cache[k] = j.feeds[0][Object.keys(j.feeds[0])[0]];
-                } catch(e){}
+                if(k === 'P') {
+                    try {
+                        const r = await fetch(gasUrl);
+                        const j = await r.json();
+                        if(j && j.length > 0) cache['P'] = j[0];
+                    } catch(e) { console.error("GAS fetch error", e); }
+                } else {
+                    try {
+                        const r = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${config[k].id}`);
+                        const j = await r.json();
+                        cache[k] = j.feeds[0][Object.keys(j.feeds[0])[0]];
+                    } catch(e) { console.error("LASS fetch error", e); }
+                }
             }
-            // 植物區 GAS 數據
-            try {
-                const rP = await fetch(https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec);
-                const jP = await rP.json();
-                if(jP && jP.length > 0) cache['P'] = jP[0];
-            } catch(e){}
-
             updateMap();
             if(currentKey !== 'HOME') updateDashboard();
             document.getElementById('status-text').innerText = "數據同步成功";
@@ -275,7 +275,7 @@
                     if(mode === 'temp') { val = parseFloat(d["溫度"]).toFixed(1); color = getLevelColor('temp', val); }
                     else if(mode === 'humi') { val = Math.round(d["濕度"]); color = getLevelColor('humi', val); }
                     else if(mode === 'co2') { val = Math.round(d["CO2"]); color = getLevelColor('co2', val); }
-                    else { val = "-"; color = "#888"; } // 植物區無 PM2.5/TVOC
+                    else { val = "-"; color = "#888"; }
                 } else {
                     if(mode === 'pm25') { val = Math.round(d.s_d0); color = getLevelColor('pm25', val); }
                     else if(mode === 'temp') { val = d.s_t0.toFixed(1); color = getLevelColor('temp', val); }
@@ -286,7 +286,8 @@
                 const vEl = document.getElementById(`v-${k}`);
                 if(vEl) {
                     vEl.innerText = val; vEl.style.color = color;
-                    if(document.getElementById(`u-${k}`)) document.getElementById(`u-${k}`).innerText = val === "-" ? "" : " " + units[mode];
+                    let uEl = document.getElementById(`u-${k}`);
+                    if(uEl) uEl.innerText = (val === "-") ? "" : " " + units[mode];
                     if(k !== 'P') document.getElementById(`pt-${k}`).style.backgroundColor = color;
                 }
             }
@@ -294,15 +295,12 @@
 
         function updateDashboard() {
             const d = cache[currentKey]; if(!d) return;
-            
             if(currentKey === 'P') {
-                // 植物監測區：四格邏輯
-                document.getElementById('gauge-card').classList.add('hidden'); // 隱藏 PM2.5 儀表
+                document.getElementById('gauge-card').classList.add('hidden');
                 document.getElementById('tvoc-container').classList.add('hidden');
                 document.getElementById('soil-container').classList.remove('hidden');
                 document.getElementById('pm25-btn').style.display = 'none';
                 document.getElementById('tvoc-btn').style.display = 'none';
-
                 document.getElementById('t-val').innerHTML = `${parseFloat(d["溫度"]).toFixed(1)} <span class="val-unit">°C</span>`;
                 document.getElementById('t-val').style.color = getLevelColor('temp', d["溫度"]);
                 document.getElementById('h-val').innerHTML = `${Math.round(d["濕度"])} <span class="val-unit">%</span>`;
@@ -311,13 +309,11 @@
                 document.getElementById('c-val').style.color = getLevelColor('co2', d["CO2"]);
                 document.getElementById('soil-val').innerText = Math.round(d["土壤濕度"]) + " %";
             } else {
-                // 一般測站
                 document.getElementById('gauge-card').classList.remove('hidden');
                 document.getElementById('tvoc-container').classList.remove('hidden');
                 document.getElementById('soil-container').classList.add('hidden');
                 document.getElementById('pm25-btn').style.display = 'block';
                 document.getElementById('tvoc-btn').style.display = 'block';
-
                 const pm = Math.round(d.s_d0), pmCol = getLevelColor('pm25', pm);
                 document.getElementById('pm-val').innerText = pm;
                 document.getElementById('pm-val').style.color = pmCol;
@@ -361,14 +357,11 @@
             btn.classList.add('active');
             document.getElementById('modal-title').innerText = `${config[currentKey].name} - ${title} (24H趨勢)`;
             document.getElementById('modal-overlay').classList.add('active');
-            
-            // 植物區暫時不支援趨勢圖(因為GAS沒有存歷史數據API)
             if(currentKey === 'P') {
                 chart.data.labels = []; chart.data.datasets[0].data = [];
                 chart.data.datasets[0].label = "目前僅提供即時數據";
                 chart.update(); return;
             }
-
             const leg = document.getElementById('modal-legend');
             leg.innerHTML = '';
             if(standards[field]) {
@@ -376,20 +369,16 @@
                     leg.innerHTML += `<div class="std-box" style="background:${s.c}">${s.l}<br>${s.v}</div>`;
                 });
             }
-
             try {
                 const res = await fetch(`https://pm25.lass-net.org/data/history.php?device_id=${config[currentKey].id}`);
                 const json = await res.json();
                 const deviceData = json.feeds[0];
                 const deviceKey = Object.keys(deviceData)[0];
                 const rawHistory = deviceData[deviceKey];
-                const now = new Date().getTime();
-                const cutoff = now - (24 * 60 * 60 * 1000);
-                const interval = 15 * 60 * 1000;
+                const now = new Date().getTime(), cutoff = now - (24 * 60 * 60 * 1000), interval = 15 * 60 * 1000;
                 let allPoints = [];
                 rawHistory.forEach(f => {
-                    const tsKey = Object.keys(f)[0];
-                    const d = f[tsKey];
+                    const tsKey = Object.keys(f)[0], d = f[tsKey];
                     if (d && d[field] !== undefined) {
                         const ts = new Date(d.timestamp || tsKey).getTime();
                         if (ts >= cutoff) allPoints.push({ x: ts, y: parseFloat(d[field]) });
