@@ -244,20 +244,31 @@
             return '#2d3436';
         }
 
-        async function fetchLoop() {
+       async function fetchLoop() {
             for(let k in config) {
                 if(k === 'P') {
                     try {
-                        const r = await fetch(https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec);
+                        // 修正 1：加上引號。修正 2：加上 redirect 參數解決 CORS 問題
+                        const r = await fetch("https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec", {
+                            method: 'GET',
+                            mode: 'cors',
+                            redirect: 'follow'
+                        });
                         const j = await r.json();
                         if(j && j.length > 0) cache['P'] = j[0];
-                    } catch(e) { console.error("GAS fetch error", e); }
+                    } catch(e) { 
+                        console.error("GAS fetch error (植物區):", e); 
+                    }
                 } else {
                     try {
                         const r = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${config[k].id}`);
                         const j = await r.json();
-                        cache[k] = j.feeds[0][Object.keys(j.feeds[0])[0]];
-                    } catch(e) { console.error("LASS fetch error", e); }
+                        if (j && j.feeds && j.feeds[0]) {
+                            cache[k] = j.feeds[0][Object.keys(j.feeds[0])[0]];
+                        }
+                    } catch(e) { 
+                        console.error(`LASS fetch error (${config[k].name}):`, e); 
+                    }
                 }
             }
             updateMap();
