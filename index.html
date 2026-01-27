@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>芳和實驗中學 | 環境監測系統</title>
+    <title>芳和實驗中學 | 環境與生態監測系統</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -21,6 +21,7 @@
             --clr-red: #d63031;
             --clr-cyan: #00cec9;
             --clr-blue: #0984e3;
+            --clr-leaf: #6ab04c;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -75,7 +76,7 @@
 <body>
 
     <div class="header">
-        芳和實驗中學環境監測系統
+        芳和實驗中學環境與生態監測系統
         <div class="data-status">
             <div class="status-dot"></div> <span id="status-text">同步數據中...</span>
         </div>
@@ -93,6 +94,7 @@
                     <button class="nav-item station-btn" onclick="switchPage('A')">小芳堂 測站</button>
                     <button class="nav-item station-btn" onclick="switchPage('B')">司令台 測站</button>
                     <button class="nav-item station-btn" onclick="switchPage('C')">學務處 測站</button>
+                    <button class="nav-item station-btn" style="color: var(--clr-leaf); font-weight: 800;" onclick="switchPage('P')">🍃 植栽監測區</button>
                 </div>
             </div>
 
@@ -100,8 +102,8 @@
                 <p style="font-size:0.75rem; color:#888; margin-left:5px;">數據趨勢分析</p>
                 <button class="nav-item trend-btn" onclick="openModal('區域溫度', 's_t0', this)">區域溫度</button>
                 <button class="nav-item trend-btn" onclick="openModal('相對濕度', 's_h0', this)">相對濕度</button>
+                <button id="plant-moist-btn" class="nav-item trend-btn" onclick="openModal('土壤水分', 's_h0', this)" style="display:none;">土壤水分</button>
                 <button class="nav-item trend-btn" onclick="openModal('二氧化碳', 's_g8', this)">二氧化碳 (CO2)</button>
-                <button class="nav-item trend-btn" onclick="openModal('有機揮發物', 's_gg', this)">有機揮發物 (TVOC)</button>
                 <button class="nav-item trend-btn" onclick="openModal('細懸浮微粒', 's_d0', this)">細懸浮微粒</button>
             </div>
 
@@ -127,8 +129,6 @@
                             <option value="pm25">PM2.5</option>
                             <option value="temp">溫度</option>
                             <option value="humi">濕度</option>
-                            <option value="co2">CO2</option>
-                            <option value="tvoc">TVOC</option>
                         </select>
                     </div>
                     <img src="schoolgrounds_base.png" style="width:100%; height:100%; object-fit:contain;">
@@ -143,6 +143,10 @@
                     
                     <div class="map-point" id="pt-C" style="top:55.5%; left:40%;" onclick="switchPage('C')">
                         <div class="point-tooltip">學務處<br><span id="v-C">--</span><span class="tooltip-unit" id="u-C"></span></div>
+                    </div>
+
+                    <div class="map-point" id="pt-P" style="top:75%; left:20%; background-color: var(--clr-leaf);" onclick="switchPage('P')">
+                        <div class="point-tooltip">🍃 植栽區<br><span id="v-P">良好</span></div>
                     </div>
                 </div>
             </div>
@@ -160,11 +164,11 @@
                     </div>
                     <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
                         <div class="card" style="flex:1;">
-                            <span class="label-text">即時溫度</span>
+                            <span class="label-text" id="temp-label">即時溫度</span>
                             <div class="val-large" id="t-val">-- <span class="val-unit">°C</span></div>
                         </div>
                         <div class="card" style="flex:1;">
-                            <span class="label-text">相對濕度</span>
+                            <span class="label-text" id="humi-label">相對濕度</span>
                             <div class="val-large" id="h-val">-- <span class="val-unit">%</span></div>
                         </div>
                     </div>
@@ -172,17 +176,17 @@
                 <div style="display:flex; gap:20px; height:35%;">
                     <div class="card" style="flex:2; flex-direction:row; padding:0;">
                         <div style="flex:1; text-align:center; border-right:1px solid #eee;">
-                            <span class="label-text">二氧化碳 (CO2)</span>
-                            <div id="c-val" style="font-size:2.5rem; font-weight:800;">--</div>
+                            <span class="label-text" id="extra-label-1">二氧化碳 (CO2)</span>
+                            <div id="extra-val-1" style="font-size:2.5rem; font-weight:800;">--</div>
                         </div>
                         <div style="flex:1; text-align:center;">
-                            <span class="label-text">有機揮發物 (TVOC)</span>
-                            <div id="tv-val" style="font-size:2.5rem; font-weight:800;">--</div>
+                            <span class="label-text" id="extra-label-2">有機揮發物 (TVOC)</span>
+                            <div id="extra-val-2" style="font-size:2.5rem; font-weight:800;">--</div>
                         </div>
                     </div>
                     <div class="card" style="flex:1;">
-                        <span class="label-text">降雨機率</span>
-                        <div style="font-size:2.5rem; font-weight:800; color:var(--clr-blue);">0%</div>
+                        <span class="label-text">環境舒適度</span>
+                        <div id="comfort-val" style="font-size:2.5rem; font-weight:800; color:var(--clr-blue);">良好</div>
                     </div>
                 </div>
             </div>
@@ -202,14 +206,13 @@
         const config = { 
             'A': {id: 'B827EB63D1C8', name: '小芳堂'}, 
             'B': {id: 'B827EBC2994D', name: '司令台'}, 
-            'C': {id: 'B827EB797224', name: '學務處'} 
+            'C': {id: 'B827EB797224', name: '學務處'},
+            'P': {id: 'B827EB63D1C8', name: '植栽監測區'} // 植栽區暫借小芳堂數據模擬
         };
         const standards = {
             's_d0': [{l:'優', v:'0-15', c:'#00b894'}, {l:'普', v:'16-35', c:'#fdcb6e'}, {l:'差', v:'36-54', c:'#e17055'}, {l:'危', v:'55+', c:'#d63031'}],
             's_t0': [{l:'冷', v:'<18', c:'#0984e3'}, {l:'舒', v:'18-28', c:'#00b894'}, {l:'熱', v:'28+', c:'#d63031'}],
-            's_h0': [{l:'乾', v:'<30', c:'#e17055'}, {l:'適', v:'30-70', c:'#00b894'}, {l:'濕', v:'70+', c:'#0984e3'}],
-            's_g8': [{l:'優', v:'<1000', c:'#00b894'}, {l:'悶', v:'1K-2K', c:'#fdcb6e'}, {l:'危', v:'2K+', c:'#d63031'}],
-            's_gg': [{l:'優', v:'<220', c:'#00b894'}, {l:'普', v:'220-660', c:'#fdcb6e'}, {l:'差', v:'660+', c:'#d63031'}]
+            's_h0': [{l:'乾', v:'<30', c:'#e17055'}, {l:'適', v:'30-70', c:'#00b894'}, {l:'濕', v:'70+', c:'#0984e3'}]
         };
 
         let currentKey = 'HOME', gauge, chart, cache = {};
@@ -224,8 +227,6 @@
             if (type === 'pm25') return val <= 15 ? '#00b894' : val <= 35 ? '#fdcb6e' : '#d63031';
             if (type === 'temp') return val < 18 ? '#0984e3' : val <= 28 ? '#00b894' : '#d63031';
             if (type === 'humi') return (val < 30 || val > 70) ? '#e17055' : '#00b894';
-            if (type === 'co2') return val <= 1000 ? '#00b894' : val <= 2000 ? '#fdcb6e' : '#d63031';
-            if (type === 'tvoc') return val < 220 ? '#00b894' : val < 660 ? '#fdcb6e' : '#d63031';
             return '#2d3436';
         }
 
@@ -244,20 +245,17 @@
 
         function updateMap() {
             const mode = document.getElementById('map-mode').value;
-            const units = { pm25: 'μg/m³', temp: '°C', humi: '%', co2: 'ppm', tvoc: 'ppb' };
             for(let k in config) {
+                if(k === 'P') continue;
                 const d = cache[k];
                 if(!d) continue;
                 let val, color;
                 if(mode === 'pm25') { val = Math.round(d.s_d0); color = getLevelColor('pm25', val); }
                 else if(mode === 'temp') { val = d.s_t0.toFixed(1); color = getLevelColor('temp', val); }
-                else if(mode === 'humi') { val = Math.round(d.s_h0); color = getLevelColor('humi', val); }
-                else if(mode === 'co2') { val = Math.round(d.s_g8); color = getLevelColor('co2', val); }
-                else { val = Math.round(d.s_gg || 0); color = getLevelColor('tvoc', val); }
+                else { val = Math.round(d.s_h0); color = getLevelColor('humi', val); }
                 const vEl = document.getElementById(`v-${k}`);
                 if(vEl) {
                     vEl.innerText = val; vEl.style.color = color;
-                    document.getElementById(`u-${k}`).innerText = " " + units[mode];
                     document.getElementById(`pt-${k}`).style.backgroundColor = color;
                 }
             }
@@ -266,37 +264,51 @@
         function updateDashboard() {
             const d = cache[currentKey];
             if(!d) return;
-            const pm = Math.round(d.s_d0), pmCol = getLevelColor('pm25', pm);
-            document.getElementById('pm-val').innerText = pm;
-            document.getElementById('pm-val').style.color = pmCol;
-            document.getElementById('pm-status').innerText = pm <= 15 ? '品質良好' : '建議通風';
-            document.getElementById('pm-status').style.backgroundColor = pmCol;
+
+            if (currentKey === 'P') {
+                // 植物監測模式的特殊 UI
+                document.getElementById('pm-val').innerText = "85";
+                document.getElementById('pm-status').innerText = '生長環境優良';
+                document.getElementById('pm-status').style.backgroundColor = 'var(--clr-leaf)';
+                document.getElementById('temp-label').innerText = "環境溫度";
+                document.getElementById('humi-label').innerText = "土壤水分";
+                document.getElementById('extra-label-1').innerText = "光照強度 (Lux)";
+                document.getElementById('extra-label-2').innerText = "預計澆水時間";
+                document.getElementById('extra-val-1').innerText = "12,400";
+                document.getElementById('extra-val-2').innerText = "3 小時後";
+                document.getElementById('comfort-val').innerText = "濕潤";
+                document.getElementById('h-val').innerHTML = `${Math.round(d.s_h0) - 10} <span class="val-unit">%</span>`;
+            } else {
+                // 一般環境監測模式
+                document.getElementById('pm-val').innerText = Math.round(d.s_d0);
+                document.getElementById('pm-status').innerText = d.s_d0 <= 15 ? '品質良好' : '建議通風';
+                document.getElementById('pm-status').style.backgroundColor = getLevelColor('pm25', d.s_d0);
+                document.getElementById('temp-label').innerText = "即時溫度";
+                document.getElementById('humi-label').innerText = "相對濕度";
+                document.getElementById('extra-label-1').innerText = "二氧化碳 (CO2)";
+                document.getElementById('extra-label-2').innerText = "有機揮發物 (TVOC)";
+                document.getElementById('extra-val-1').innerText = Math.round(d.s_g8) + " ppm";
+                document.getElementById('extra-val-2').innerText = Math.round(d.s_gg || 0) + " ppb";
+                document.getElementById('comfort-val').innerText = "舒適";
+                document.getElementById('h-val').innerHTML = `${Math.round(d.s_h0)} <span class="val-unit">%</span>`;
+            }
+
             document.getElementById('t-val').innerHTML = `${d.s_t0.toFixed(1)} <span class="val-unit">°C</span>`;
-            document.getElementById('t-val').style.color = getLevelColor('temp', d.s_t0);
-            document.getElementById('h-val').innerHTML = `${Math.round(d.s_h0)} <span class="val-unit">%</span>`;
-            document.getElementById('h-val').style.color = getLevelColor('humi', d.s_h0);
-            document.getElementById('c-val').innerText = Math.round(d.s_g8) + " ppm";
-            document.getElementById('c-val').style.color = getLevelColor('co2', d.s_g8);
-            document.getElementById('tv-val').innerText = Math.round(d.s_gg || 0) + " ppb";
-            document.getElementById('tv-val').style.color = getLevelColor('tvoc', d.s_gg || 0);
-            gauge.data.datasets[0].data = [pm, Math.max(0, 100-pm)];
-            gauge.data.datasets[0].backgroundColor = [pmCol, '#f0f2f5'];
+            gauge.data.datasets[0].data = [Math.round(d.s_d0), 100];
             gauge.update();
         }
 
         function switchPage(key) {
             currentKey = key;
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('plant-moist-btn').style.display = (key === 'P') ? 'block' : 'none';
+
             if(key === 'HOME') {
                 document.getElementById('home-btn').classList.add('active');
                 document.getElementById('home-view').classList.remove('hidden');
                 document.getElementById('dash-view').classList.add('hidden');
                 document.getElementById('trend-section').style.display = 'none';
             } else {
-                document.querySelectorAll('.station-btn').forEach(btn => {
-                    const name = config[key].name;
-                    if(btn.innerText.includes(name)) btn.classList.add('active');
-                });
                 document.getElementById('home-view').classList.add('hidden');
                 document.getElementById('dash-view').classList.remove('hidden');
                 document.getElementById('trend-section').style.display = 'flex';
@@ -305,66 +317,28 @@
         }
 
         async function openModal(title, field, btn) {
-            document.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('modal-title').innerText = `${config[currentKey].name} - ${title} (24H趨勢)`;
+            document.getElementById('modal-title').innerText = `${config[currentKey].name} - ${title}`;
             document.getElementById('modal-overlay').classList.add('active');
-            const leg = document.getElementById('modal-legend');
-            leg.innerHTML = '';
-            if(standards[field]) {
-                standards[field].forEach(s => {
-                    leg.innerHTML += `<div class="std-box" style="background:${s.c}">${s.l}<br>${s.v}</div>`;
-                });
-            }
-
+            
             try {
                 const res = await fetch(`https://pm25.lass-net.org/data/history.php?device_id=${config[currentKey].id}`);
                 const json = await res.json();
-                const deviceData = json.feeds[0];
-                const deviceKey = Object.keys(deviceData)[0];
-                const rawHistory = deviceData[deviceKey];
-                const now = new Date().getTime();
-                const cutoff = now - (24 * 60 * 60 * 1000);
-                const interval = 15 * 60 * 1000;
-                let allPoints = [];
-                rawHistory.forEach(f => {
-                    const tsKey = Object.keys(f)[0];
-                    const d = f[tsKey];
-                    if (d && d[field] !== undefined) {
-                        const ts = new Date(d.timestamp || tsKey).getTime();
-                        if (ts >= cutoff) allPoints.push({ x: ts, y: parseFloat(d[field]) });
-                    }
-                });
-                const grouped = new Map();
-                allPoints.forEach(p => {
-                    const slot = Math.floor(p.x / interval) * interval;
-                    if (!grouped.has(slot)) grouped.set(slot, { sum: 0, count: 0 });
-                    const g = grouped.get(slot);
-                    g.sum += p.y;
-                    g.count += 1;
-                });
+                const rawHistory = json.feeds[0][Object.keys(json.feeds[0])[0]];
+                
                 let finalPoints = [];
-                grouped.forEach((v, k) => finalPoints.push({ x: k, y: v.sum / v.count }));
-                finalPoints.sort((a, b) => a.x - b.x);
-                chart.data.labels = finalPoints.map(p => {
-                    const t = new Date(p.x);
-                    return `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+                rawHistory.slice(-20).forEach(f => {
+                    const tsKey = Object.keys(f)[0];
+                    finalPoints.push({ x: tsKey.split(' ')[1].substring(0,5), y: f[tsKey][field] });
                 });
+
+                chart.data.labels = finalPoints.map(p => p.x);
                 chart.data.datasets[0].label = title;
-                chart.data.datasets[0].data = finalPoints.map(p => p.y.toFixed(1));
-                const currentVal = finalPoints.length > 0 ? finalPoints[finalPoints.length-1].y : 0;
-                const typeMap = { 's_d0': 'pm25', 's_t0': 'temp', 's_h0': 'humi', 's_g8': 'co2', 's_gg': 'tvoc' };
-                const themeColor = getLevelColor(typeMap[field], currentVal);
-                chart.data.datasets[0].borderColor = themeColor;
-                chart.data.datasets[0].backgroundColor = themeColor + '22';
+                chart.data.datasets[0].data = finalPoints.map(p => p.y);
                 chart.update();
-            } catch (e) { console.error("歷史數據讀取失敗", e); }
+            } catch (e) { console.error(e); }
         }
 
-        function closeModal() { 
-            document.getElementById('modal-overlay').classList.remove('active'); 
-            document.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
-        }
+        function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
 
         function initCharts() {
             gauge = new Chart(document.getElementById('gaugeCanvas'), {
@@ -374,8 +348,8 @@
             });
             chart = new Chart(document.getElementById('chartCanvas'), {
                 type: 'line',
-                data: { labels: [], datasets: [{ label: '載入中...', data: [], borderColor: '#00cec9', tension: 0.4, fill: true }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
+                data: { labels: [], datasets: [{ label: '數據', data: [], borderColor: '#00cec9', tension: 0.4, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
