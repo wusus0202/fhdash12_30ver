@@ -1,56 +1,450 @@
-// --- 僅修改這部分邏輯，其餘結構完全不動 ---
-
-async function fetchLoop() {
-    // 1. 原有的 LASS 測站數據抓取 (A, B, C)
-    for(let k in config) {
-        if(k === 'P') continue; // 跳過 P，因為 P 要抓 GAS 的數據
-        try {
-            const r = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${config[k].id}`);
-            const j = await r.json();
-            cache[k] = j.feeds[0][Object.keys(j.feeds[0])[0]];
-        } catch(e){ console.log(k + " LASS fetch error"); }
-    }
-
-    // 2. 針對植物區 (P) 抓取你的 Google Sheets 數據
-    try {
-        const gasUrl = "https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec"; // 👈 請填入你的 GAS 部署網址
-        const rP = await fetch(gasUrl);
-        const jP = await rP.json();
-        if(jP && jP.length > 0) {
-            cache['P'] = jP[0]; // 儲存來自 Sheet 的最新一筆資料
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>芳和實驗中學 | 環境監測系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --sidebar-color: #3d3d3d;
+            --header-bg: #e0d8d7;
+            --card-bg: #ffffff;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --radius: 20px;
+            --shadow: 0 10px 30px rgba(0,0,0,0.05);
+            --clr-green: #00b894;
+            --clr-yellow: #fdcb6e;
+            --clr-orange: #e17055;
+            --clr-red: #d63031;
+            --clr-cyan: #00cec9;
+            --clr-blue: #0984e3;
+            --clr-leaf: #2ecc71;
         }
-    } catch(e){ console.log("Plant GAS fetch error"); }
 
-    updateMap();
-    if(currentKey !== 'HOME') updateDashboard();
-    document.getElementById('status-text').innerText = "數據同步成功";
-}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'PingFang TC', 'Segoe UI', sans-serif; background: var(--bg-color); height: 100vh; overflow: hidden; display: flex; flex-direction: column; color: var(--text-main); }
 
-function updateDashboard() {
-    const d = cache[currentKey]; if(!d) return;
-    
-    if(currentKey === 'P') {
-        // 🍃 植物區專用：精確四格配置 (對應你 Sheet Script 的欄位名稱)
-        document.getElementById('l1').innerText = "環境溫度";
-        document.getElementById('v1').innerHTML = `${parseFloat(d["溫度"]).toFixed(1)} <span class="val-unit">°C</span>`;
+        .header { height: 60px; background: var(--header-bg); display: flex; align-items: center; padding: 0 25px; font-weight: 700; z-index: 100; }
+        .data-status { margin-left: auto; background: white; padding: 6px 15px; border-radius: 50px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--clr-green); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .app-container { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 280px; background: var(--sidebar-color); color: white; padding: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
         
-        document.getElementById('l2').innerText = "環境濕度";
-        document.getElementById('v2').innerHTML = `${Math.round(d["濕度"])} <span class="val-unit">%</span>`;
+        .nav-item { 
+            width: 100%; padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); cursor: pointer; 
+            text-align: left; transition: all 0.3s cubic-bezier(0.2, 1, 0.2, 1); font-size: 0.95rem;
+        }
+        .nav-item:hover { transform: translateX(8px); background: rgba(255,255,255,0.15); color: white; }
+        .nav-item.active { background: var(--clr-cyan) !important; color: white !important; font-weight: 700; border-color: var(--clr-cyan); box-shadow: 0 4px 15px rgba(0, 206, 201, 0.3); }
+
+        .dropdown-list { display: none; flex-direction: column; gap: 5px; margin-top: 5px; padding-left: 10px; }
+        .dropdown-list.show { display: flex; }
+
+        .main-content { flex: 1; padding: 25px; overflow-y: auto; }
+        .view-container { height: 100%; display: flex; flex-direction: column; gap: 20px; }
+        .hidden { display: none !important; }
+
+        .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 25px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .val-large { font-size: 3.5rem; font-weight: 800; transition: color 0.5s; }
+        .val-unit { font-size: 1.2rem; color: var(--text-muted); margin-left: 4px; font-weight: 500; }
+        .label-text { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 700; }
+
+        .map-container { position: relative; width: 100%; height: 100%; background: white; border-radius: var(--radius); overflow: hidden; }
+        .map-point { position: absolute; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; cursor: pointer; transform: translate(-50%, -50%); z-index: 10; transition: background 0.5s; }
+        .map-point::after { content: ''; position: absolute; inset: -15px; border-radius: 50%; background: inherit; opacity: 0.3; animation: radar 2s infinite; pointer-events: none; }
+        @keyframes radar { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
         
-        document.getElementById('l3').innerText = "土壤濕度";
-        document.getElementById('v3').innerHTML = `${Math.round(d["土壤濕度"])} <span class="val-unit">%</span>`;
-        
-        document.getElementById('l4').innerText = "二氧化碳 (CO2)";
-        document.getElementById('v4').innerHTML = `${Math.round(d["CO2"])} <span class="val-unit">ppm</span>`;
-    } else {
-        // 🏫 一般測站 (維持原樣)
-        document.getElementById('l1').innerText = "即時溫度";
-        document.getElementById('v1').innerHTML = `${d.s_t0.toFixed(1)} <span class="val-unit">°C</span>`;
-        document.getElementById('l2').innerText = "相對濕度";
-        document.getElementById('v2').innerHTML = `${Math.round(d.s_h0)} <span class="val-unit">%</span>`;
-        document.getElementById('l3').innerText = "細懸浮微粒 (PM2.5)";
-        document.getElementById('v3').innerHTML = `${Math.round(d.s_d0)} <span class="val-unit">μg/m³</span>`;
-        document.getElementById('l4').innerText = "二氧化碳 (CO2)";
-        document.getElementById('v4').innerHTML = `${Math.round(d.s_g8)} <span class="val-unit">ppm</span>`;
-    }
-}
+        .point-tooltip { position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%); background: white; padding: 8px 12px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 115px; text-align: center; font-weight: 800; z-index: 20; }
+
+        .sidebar-bottom { margin-top: auto; background: rgba(255,255,255,0.08); padding: 15px; border-radius: 15px; display: flex; align-items: center; gap: 15px; }
+        .analog-clock { width: 45px; height: 45px; border: 2px solid white; border-radius: 50%; position: relative; flex-shrink: 0; }
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; background: white; border-radius: 10px; transform: translateX(-50%); }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 35px; border-radius: 25px; width: 90%; max-width: 800px; position: relative; }
+        .std-legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
+        .std-box { padding: 8px; border-radius: 10px; text-align: center; color: white; font-size: 0.8rem; font-weight: 800; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        芳和實驗中學環境監測系統
+        <div class="data-status">
+            <div class="status-dot"></div> <span id="status-text">同步數據中...</span>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <button id="home-btn" class="nav-item active" onclick="switchPage('HOME')">HOME</button>
+            
+            <div style="margin-top: 5px;">
+                <button class="nav-item" style="background: white; color: #333;" onclick="document.getElementById('station-list').classList.toggle('show')">
+                    選擇監測站點 <span style="float:right">▼</span>
+                </button>
+                <div class="dropdown-list" id="station-list">
+                    <button class="nav-item station-btn" onclick="switchPage('A')">小芳堂 測站</button>
+                    <button class="nav-item station-btn" onclick="switchPage('B')">司令台 測站</button>
+                    <button class="nav-item station-btn" onclick="switchPage('C')">學務處 測站</button>
+                    <button class="nav-item station-btn" onclick="switchPage('P')" style="color:var(--clr-leaf); font-weight:800;">🍃 植物監測區</button>
+                </div>
+            </div>
+
+            <div id="trend-section" style="display:none; flex-direction:column; gap:8px; margin-top:15px;">
+                <p style="font-size:0.75rem; color:#888; margin-left:5px;">數據趨勢分析</p>
+                <button class="nav-item trend-btn" onclick="openModal('區域溫度', 's_t0', this)">區域溫度</button>
+                <button class="nav-item trend-btn" onclick="openModal('相對濕度', 's_h0', this)">相對濕度</button>
+                <button class="nav-item trend-btn" onclick="openModal('二氧化碳', 's_g8', this)">二氧化碳 (CO2)</button>
+                <button class="nav-item trend-btn" id="tvoc-btn" onclick="openModal('有機揮發物', 's_gg', this)">有機揮發物 (TVOC)</button>
+                <button class="nav-item trend-btn" id="pm25-btn" onclick="openModal('細懸浮微粒', 's_d0', this)">細懸浮微粒</button>
+            </div>
+
+            <div class="sidebar-bottom">
+                <div class="analog-clock">
+                    <div class="hand hour-hand" id="hr" style="width: 3px; height: 12px;"></div>
+                    <div class="hand min-hand" id="mn" style="width: 2px; height: 18px;"></div>
+                    <div class="hand sec-hand" id="sc" style="width: 1.5px; height: 20px; background: var(--clr-red);"></div>
+                </div>
+                <div>
+                    <div id="date-display" style="font-size:0.7rem; color:rgba(255,255,255,0.5);">--</div>
+                    <div id="time-display" style="font-size:0.95rem; font-weight:800;">00:00:00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="home-view" class="view-container">
+                <div class="map-container">
+                    <div style="position:absolute; top:20px; right:20px; z-index:100; background:white; padding:12px; border-radius:15px; box-shadow:var(--shadow); font-weight:800;">
+                        顯示模式：
+                        <select id="map-mode" onchange="updateMap()" style="border:none; font-weight:800; color:var(--clr-cyan); outline:none; cursor:pointer;">
+                            <option value="pm25">PM2.5</option>
+                            <option value="temp">溫度</option>
+                            <option value="humi">濕度</option>
+                            <option value="co2">CO2</option>
+                            <option value="tvoc">TVOC</option>
+                        </select>
+                    </div>
+                    <img src="schoolgrounds_base.png" style="width:100%; height:100%; object-fit:contain;">
+                    
+                    <div class="map-point" id="pt-A" style="top:23.5%; left:49.5%;" onclick="switchPage('A')">
+                        <div class="point-tooltip">小芳堂<br><span id="v-A">--</span><span class="tooltip-unit" id="u-A"></span></div>
+                    </div>
+                    
+                    <div class="map-point" id="pt-B" style="top:40%; left:85%;" onclick="switchPage('B')">
+                        <div class="point-tooltip">司令台<br><span id="v-B">--</span><span class="tooltip-unit" id="u-B"></span></div>
+                    </div>
+                    
+                    <div class="map-point" id="pt-C" style="top:55.5%; left:40%;" onclick="switchPage('C')">
+                        <div class="point-tooltip">學務處<br><span id="v-C">--</span><span class="tooltip-unit" id="u-C"></span></div>
+                    </div>
+
+                    <div class="map-point" id="pt-P" style="top:75%; left:25%; background-color: var(--clr-leaf);" onclick="switchPage('P')">
+                        <div class="point-tooltip">植物區<br><span id="v-P">正常</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dash-view" class="view-container hidden">
+                <div style="display:flex; gap:20px; height:60%;">
+                    <div class="card" id="gauge-card" style="flex:2;">
+                        <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                            <canvas id="gaugeCanvas"></canvas>
+                            <div style="position:absolute; text-align:center; transform: translateY(20px);">
+                                <div class="val-large" id="pm-val">--</div>
+                                <div id="pm-status" style="padding:4px 18px; border-radius:20px; color:white; font-size:0.9rem; font-weight:800; display:inline-block;">讀取中</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="side-cards" style="flex:1; display:flex; flex-direction:column; gap:20px;">
+                        <div class="card" style="flex:1;">
+                            <span class="label-text" id="l1">即時溫度</span>
+                            <div class="val-large" id="t-val">-- <span class="val-unit">°C</span></div>
+                        </div>
+                        <div class="card" style="flex:1;">
+                            <span class="label-text" id="l2">相對濕度</span>
+                            <div class="val-large" id="h-val">-- <span class="val-unit">%</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:20px; height:35%;">
+                    <div class="card" style="flex:2; flex-direction:row; padding:0;">
+                        <div style="flex:1; text-align:center; border-right:1px solid #eee;">
+                            <span class="label-text" id="l4">二氧化碳 (CO2)</span>
+                            <div id="c-val" style="font-size:2.5rem; font-weight:800;">--</div>
+                        </div>
+                        <div id="tvoc-container" style="flex:1; text-align:center;">
+                            <span class="label-text">有機揮發物 (TVOC)</span>
+                            <div id="tv-val" style="font-size:2.5rem; font-weight:800;">--</div>
+                        </div>
+                        <div id="soil-container" class="hidden" style="flex:1; text-align:center;">
+                            <span class="label-text" id="l3">土壤濕度</span>
+                            <div id="soil-val" style="font-size:2.5rem; font-weight:800; color:var(--clr-blue);">--</div>
+                        </div>
+                    </div>
+                    <div class="card" id="rain-card" style="flex:1;">
+                        <span class="label-text">降雨機率</span>
+                        <div style="font-size:2.5rem; font-weight:800; color:var(--clr-blue);">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeModal()">
+        <div class="modal-content">
+            <h2 id="modal-title" style="font-weight:900;">趨勢分析</h2>
+            <div style="height:350px; margin-top:20px;"><canvas id="chartCanvas"></canvas></div>
+            <div class="std-legend" id="modal-legend"></div>
+            <button onclick="closeModal()" style="position:absolute; top:20px; right:20px; border:none; background:none; font-size:1.5rem; cursor:pointer;">×</button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ 請填入你部署 GAS 的網址
+        const gasUrl = "https://script.google.com/macros/s/AKfycbyVn9uHn8F48Tz7LhXp-R0O8S45Wp-3P8XU2I3v5I/exec"; 
+
+        const config = { 
+            'A': {id: 'B827EB63D1C8', name: '小芳堂'}, 
+            'B': {id: 'B827EBC2994D', name: '司令台'}, 
+            'C': {id: 'B827EB797224', name: '學務處'},
+            'P': {id: 'PLANT', name: '植物區'}
+        };
+        const standards = {
+            's_d0': [{l:'優', v:'0-15', c:'#00b894'}, {l:'普', v:'16-35', c:'#fdcb6e'}, {l:'差', v:'36-54', c:'#e17055'}, {l:'危', v:'55+', c:'#d63031'}],
+            's_t0': [{l:'冷', v:'<18', c:'#0984e3'}, {l:'舒', v:'18-28', c:'#00b894'}, {l:'熱', v:'28+', c:'#d63031'}],
+            's_h0': [{l:'乾', v:'<30', c:'#e17055'}, {l:'適', v:'30-70', c:'#00b894'}, {l:'濕', v:'70+', c:'#0984e3'}],
+            's_g8': [{l:'優', v:'<1000', c:'#00b894'}, {l:'悶', v:'1K-2K', c:'#fdcb6e'}, {l:'危', v:'2K+', c:'#d63031'}],
+            's_gg': [{l:'優', v:'<220', c:'#00b894'}, {l:'普', v:'220-660', c:'#fdcb6e'}, {l:'差', v:'660+', c:'#d63031'}]
+        };
+
+        let currentKey = 'HOME', gauge, chart, cache = {};
+
+        window.onload = () => {
+            initCharts();
+            updateClock(); setInterval(updateClock, 1000);
+            fetchLoop(); setInterval(fetchLoop, 60000);
+        };
+
+        function getLevelColor(type, val) {
+            if (type === 'pm25') return val <= 15 ? '#00b894' : val <= 35 ? '#fdcb6e' : '#d63031';
+            if (type === 'temp') return val < 18 ? '#0984e3' : val <= 28 ? '#00b894' : '#d63031';
+            if (type === 'humi') return (val < 30 || val > 70) ? '#e17055' : '#00b894';
+            if (type === 'co2') return val <= 1000 ? '#00b894' : val <= 2000 ? '#fdcb6e' : '#d63031';
+            if (type === 'tvoc') return val < 220 ? '#00b894' : val < 660 ? '#fdcb6e' : '#d63031';
+            return '#2d3436';
+        }
+
+        async function fetchLoop() {
+            // LASS 數據
+            for(let k in config) {
+                if(k === 'P') continue;
+                try {
+                    const r = await fetch(`https://pm25.lass-net.org/data/last.php?device_id=${config[k].id}`);
+                    const j = await r.json();
+                    cache[k] = j.feeds[0][Object.keys(j.feeds[0])[0]];
+                } catch(e){}
+            }
+            // 植物區 GAS 數據
+            try {
+                const rP = await fetch(https://script.google.com/macros/s/AKfycbzAaqP79kMX9Uq_QtIqnwMx8tp2v62k6H5lDOCtCZV2W73NwfWN9kFdMz0Myalx2vxRFw/exec);
+                const jP = await rP.json();
+                if(jP && jP.length > 0) cache['P'] = jP[0];
+            } catch(e){}
+
+            updateMap();
+            if(currentKey !== 'HOME') updateDashboard();
+            document.getElementById('status-text').innerText = "數據同步成功";
+        }
+
+        function updateMap() {
+            const mode = document.getElementById('map-mode').value;
+            const units = { pm25: 'μg/m³', temp: '°C', humi: '%', co2: 'ppm', tvoc: 'ppb' };
+            for(let k in config) {
+                const d = cache[k]; if(!d) continue;
+                let val, color;
+                if(k === 'P') {
+                    if(mode === 'temp') { val = parseFloat(d["溫度"]).toFixed(1); color = getLevelColor('temp', val); }
+                    else if(mode === 'humi') { val = Math.round(d["濕度"]); color = getLevelColor('humi', val); }
+                    else if(mode === 'co2') { val = Math.round(d["CO2"]); color = getLevelColor('co2', val); }
+                    else { val = "-"; color = "#888"; } // 植物區無 PM2.5/TVOC
+                } else {
+                    if(mode === 'pm25') { val = Math.round(d.s_d0); color = getLevelColor('pm25', val); }
+                    else if(mode === 'temp') { val = d.s_t0.toFixed(1); color = getLevelColor('temp', val); }
+                    else if(mode === 'humi') { val = Math.round(d.s_h0); color = getLevelColor('humi', val); }
+                    else if(mode === 'co2') { val = Math.round(d.s_g8); color = getLevelColor('co2', val); }
+                    else { val = Math.round(d.s_gg || 0); color = getLevelColor('tvoc', val); }
+                }
+                const vEl = document.getElementById(`v-${k}`);
+                if(vEl) {
+                    vEl.innerText = val; vEl.style.color = color;
+                    if(document.getElementById(`u-${k}`)) document.getElementById(`u-${k}`).innerText = val === "-" ? "" : " " + units[mode];
+                    if(k !== 'P') document.getElementById(`pt-${k}`).style.backgroundColor = color;
+                }
+            }
+        }
+
+        function updateDashboard() {
+            const d = cache[currentKey]; if(!d) return;
+            
+            if(currentKey === 'P') {
+                // 植物監測區：四格邏輯
+                document.getElementById('gauge-card').classList.add('hidden'); // 隱藏 PM2.5 儀表
+                document.getElementById('tvoc-container').classList.add('hidden');
+                document.getElementById('soil-container').classList.remove('hidden');
+                document.getElementById('pm25-btn').style.display = 'none';
+                document.getElementById('tvoc-btn').style.display = 'none';
+
+                document.getElementById('t-val').innerHTML = `${parseFloat(d["溫度"]).toFixed(1)} <span class="val-unit">°C</span>`;
+                document.getElementById('t-val').style.color = getLevelColor('temp', d["溫度"]);
+                document.getElementById('h-val').innerHTML = `${Math.round(d["濕度"])} <span class="val-unit">%</span>`;
+                document.getElementById('h-val').style.color = getLevelColor('humi', d["濕度"]);
+                document.getElementById('c-val').innerText = Math.round(d["CO2"]) + " ppm";
+                document.getElementById('c-val').style.color = getLevelColor('co2', d["CO2"]);
+                document.getElementById('soil-val').innerText = Math.round(d["土壤濕度"]) + " %";
+            } else {
+                // 一般測站
+                document.getElementById('gauge-card').classList.remove('hidden');
+                document.getElementById('tvoc-container').classList.remove('hidden');
+                document.getElementById('soil-container').classList.add('hidden');
+                document.getElementById('pm25-btn').style.display = 'block';
+                document.getElementById('tvoc-btn').style.display = 'block';
+
+                const pm = Math.round(d.s_d0), pmCol = getLevelColor('pm25', pm);
+                document.getElementById('pm-val').innerText = pm;
+                document.getElementById('pm-val').style.color = pmCol;
+                document.getElementById('pm-status').innerText = pm <= 15 ? '品質良好' : '建議通風';
+                document.getElementById('pm-status').style.backgroundColor = pmCol;
+                document.getElementById('t-val').innerHTML = `${d.s_t0.toFixed(1)} <span class="val-unit">°C</span>`;
+                document.getElementById('t-val').style.color = getLevelColor('temp', d.s_t0);
+                document.getElementById('h-val').innerHTML = `${Math.round(d.s_h0)} <span class="val-unit">%</span>`;
+                document.getElementById('h-val').style.color = getLevelColor('humi', d.s_h0);
+                document.getElementById('c-val').innerText = Math.round(d.s_g8) + " ppm";
+                document.getElementById('c-val').style.color = getLevelColor('co2', d.s_g8);
+                document.getElementById('tv-val').innerText = Math.round(d.s_gg || 0) + " ppb";
+                document.getElementById('tv-val').style.color = getLevelColor('tvoc', d.s_gg || 0);
+                gauge.data.datasets[0].data = [pm, Math.max(0, 100-pm)];
+                gauge.data.datasets[0].backgroundColor = [pmCol, '#f0f2f5'];
+                gauge.update();
+            }
+        }
+
+        function switchPage(key) {
+            currentKey = key;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(key === 'HOME') {
+                document.getElementById('home-btn').classList.add('active');
+                document.getElementById('home-view').classList.remove('hidden');
+                document.getElementById('dash-view').classList.add('hidden');
+                document.getElementById('trend-section').style.display = 'none';
+            } else {
+                document.querySelectorAll('.station-btn').forEach(btn => {
+                    if(btn.innerText.includes(config[key].name)) btn.classList.add('active');
+                });
+                document.getElementById('home-view').classList.add('hidden');
+                document.getElementById('dash-view').classList.remove('hidden');
+                document.getElementById('trend-section').style.display = 'flex';
+                updateDashboard();
+            }
+        }
+
+        async function openModal(title, field, btn) {
+            document.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('modal-title').innerText = `${config[currentKey].name} - ${title} (24H趨勢)`;
+            document.getElementById('modal-overlay').classList.add('active');
+            
+            // 植物區暫時不支援趨勢圖(因為GAS沒有存歷史數據API)
+            if(currentKey === 'P') {
+                chart.data.labels = []; chart.data.datasets[0].data = [];
+                chart.data.datasets[0].label = "目前僅提供即時數據";
+                chart.update(); return;
+            }
+
+            const leg = document.getElementById('modal-legend');
+            leg.innerHTML = '';
+            if(standards[field]) {
+                standards[field].forEach(s => {
+                    leg.innerHTML += `<div class="std-box" style="background:${s.c}">${s.l}<br>${s.v}</div>`;
+                });
+            }
+
+            try {
+                const res = await fetch(`https://pm25.lass-net.org/data/history.php?device_id=${config[currentKey].id}`);
+                const json = await res.json();
+                const deviceData = json.feeds[0];
+                const deviceKey = Object.keys(deviceData)[0];
+                const rawHistory = deviceData[deviceKey];
+                const now = new Date().getTime();
+                const cutoff = now - (24 * 60 * 60 * 1000);
+                const interval = 15 * 60 * 1000;
+                let allPoints = [];
+                rawHistory.forEach(f => {
+                    const tsKey = Object.keys(f)[0];
+                    const d = f[tsKey];
+                    if (d && d[field] !== undefined) {
+                        const ts = new Date(d.timestamp || tsKey).getTime();
+                        if (ts >= cutoff) allPoints.push({ x: ts, y: parseFloat(d[field]) });
+                    }
+                });
+                const grouped = new Map();
+                allPoints.forEach(p => {
+                    const slot = Math.floor(p.x / interval) * interval;
+                    if (!grouped.has(slot)) grouped.set(slot, { sum: 0, count: 0 });
+                    const g = grouped.get(slot); g.sum += p.y; g.count += 1;
+                });
+                let finalPoints = [];
+                grouped.forEach((v, k) => finalPoints.push({ x: k, y: v.sum / v.count }));
+                finalPoints.sort((a, b) => a.x - b.x);
+                chart.data.labels = finalPoints.map(p => {
+                    const t = new Date(p.x);
+                    return `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+                });
+                chart.data.datasets[0].label = title;
+                chart.data.datasets[0].data = finalPoints.map(p => p.y.toFixed(1));
+                const currentVal = finalPoints.length > 0 ? finalPoints[finalPoints.length-1].y : 0;
+                const typeMap = { 's_d0': 'pm25', 's_t0': 'temp', 's_h0': 'humi', 's_g8': 'co2', 's_gg': 'tvoc' };
+                const themeColor = getLevelColor(typeMap[field], currentVal);
+                chart.data.datasets[0].borderColor = themeColor;
+                chart.data.datasets[0].backgroundColor = themeColor + '22';
+                chart.update();
+            } catch (e) { console.error("歷史數據讀取失敗", e); }
+        }
+
+        function closeModal() { 
+            document.getElementById('modal-overlay').classList.remove('active'); 
+            document.querySelectorAll('.trend-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        function initCharts() {
+            gauge = new Chart(document.getElementById('gaugeCanvas'), {
+                type: 'doughnut',
+                data: { datasets: [{ data: [0, 100], circumference: 270, rotation: 225, cutout: '85%', borderRadius: 10 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+            chart = new Chart(document.getElementById('chartCanvas'), {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: '載入中...', data: [], borderColor: '#00cec9', tension: 0.4, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
+            });
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('hr').style.transform = `translateX(-50%) rotate(${(now.getHours()%12)*30 + now.getMinutes()*0.5}deg)`;
+            document.getElementById('mn').style.transform = `translateX(-50%) rotate(${now.getMinutes()*6}deg)`;
+            document.getElementById('sc').style.transform = `translateX(-50%) rotate(${now.getSeconds()*6}deg)`;
+            document.getElementById('time-display').innerText = now.toLocaleTimeString('zh-TW', {hour12:false});
+            document.getElementById('date-display').innerText = now.toLocaleDateString('zh-TW', {month:'long', day:'numeric'});
+        }
+    </script>
+</body>
+</html>
